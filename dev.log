@@ -1,0 +1,43 @@
+
+> kmdashboard@0.1.0 dev
+> next dev -p 3001
+
+⨯ Failed to start server
+Error: listen EADDRINUSE: address already in use :::3001
+    at <unknown> (Error: listen EADDRINUSE: address already in use :::3001)
+    at new Promise (<anonymous>) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3001
+}
+[?25h
+y of D:\Gigs\kmmediatraininginstitute\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * D:\Gigs\kmmediatraininginstitute\kmdashboard\package-lock.json
+
+⚠ Slow filesystem detected. The benchmark took 652ms. If D:\Gigs\kmmediatraininginstitute\kmdashboard/.next/dev is a network drive, consider moving it to a local folder.
+See more: https://nextjs.org/docs/app/guides/local-development
+
+○ Compiling /profile ...
+ GET /student/finance 200 in 84s (next.js: 83s, application-code: 1039ms)
+ GET /student/assignments 200 in 84s (next.js: 83s, application-code: 634ms)
+✓ Finished filesystem cache database compaction in 17.9s
+ GET /profile 200 in 212ms (next.js: 35ms, application-code: 177ms)
+✓ Finished filesystem cache database compaction in 16.9s
+✓ Finished filesystem cache database compaction in 13.7s
+✓ Finished filesystem cache database compaction in 23.2s
+ GET /profile 200 in 209ms (next.js: 33ms, application-code: 175ms)
+ GET /profile 200 in 87ms (next.js: 17ms, application-code: 70ms)
+ GET /login?reason=expired 200 in 167ms (next.js: 33ms, application-code: 134ms)
+ GET /dashboard/student 200 in 646ms (next.js: 320ms, application-code: 326ms)
+ GET /dashboard/student 200 in 139ms (next.js: 26ms, application-code: 113ms)
+ GET /profile 200 in 98ms (next.js: 20ms, application-code: 78ms)
+ GET /student/finance 200 in 462ms (next.js: 354ms, application-code: 108ms)
+ GET /student/finance 200 in 151ms (next.js: 17ms, application-code: 134ms)
+ GET /student/courses 200 in 1116ms (next.js: 966ms, application-code: 150ms)
+ GET /student/calendar 200 in 747ms (next.js: 623ms, application-code: 124ms)
+ GET /dashboard/student?focus=notifications 200 in 85ms (next.js: 14ms, application-code: 71ms)

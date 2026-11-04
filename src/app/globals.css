@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+/*
+ * KM Media Training Institute — design system tokens (Tailwind v4 @theme).
+ * Brand: sea blue #0994C4 (institute's official colour, used across the
+ * marketing site). Deep navy #0B2239 anchors headings and the sidebar;
+ * teal and lemon are restrained accents. All tokens map onto Tailwind
+ * utilities (bg-brand-600, text-ink-900, etc.) so components stay on-system.
+ */
+@theme {
+  /* Brand — sea blue scale built around the official #0994C4 */
+  --color-brand-50: #eef9fd;
+  --color-brand-100: #d9f0f9;
+  --color-brand-200: #b8e4f4;
+  --color-brand-300: #85d1ec;
+  --color-brand-400: #3db3da;
+  --color-brand-500: #0994c4; /* official brand colour */
+  --color-brand-600: #067a9d; /* darker shade from the marketing site */
+  --color-brand-700: #06607a;
+  --color-brand-800: #085066;
+  --color-brand-900: #0a3f52;
+  --color-brand-950: #082c3a;
+
+  /* Ink — deep navy text surfaces */
+  --color-ink-50: #f2f6fa;
+  --color-ink-100: #e2ebf3;
+  --color-ink-200: #c3d5e4;
+  --color-ink-300: #93b4cd;
+  --color-ink-400: #5c8cab;
+  --color-ink-500: #3a6f92;
+  --color-ink-600: #2b5a78;
+  --color-ink-700: #264b62;
+  --color-ink-800: #234052;
+  --color-ink-900: #0b2239; /* headings / sidebar */
+  --color-ink-950: #071626;
+
+  /* Semantic accents */
+  --color-lemon-400: #f3c614; /* restrained accent for highlights */
+  --color-lemon-500: #eab308;
+
+  /* Typography scale (system font stack — zero network cost) */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Consistent corner radius */
+  --radius-card: 0.75rem;
+}
+
+:root {
+  --background: #f6f8fb; /* soft cool off-white page background */
+  --foreground: #0b2239;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* Consistent, visible keyboard focus across the app (WCAG 2.1 AA 2.4.7) */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+/* Transient highlight for dashboard deep-links (?focus=… sections). */
+.focus-flash {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 4px;
+  border-radius: var(--radius-card);
+}
+
+/* Deep-link / anchor targets clear the sticky topbar in the sidebar layout. */
+#dashboard-main [id] {
+  scroll-margin-top: 5rem;
+}
+
+/* Respect reduced-motion preferences: kill nonessential animation. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
