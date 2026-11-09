@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api/client";
 import {
   assignmentsApi,
   offeringsApi,
+  fileUrl,
   type Assignment,
   type Offering,
   type Submission,
@@ -272,11 +273,20 @@ function TrainerAssignmentsInner() {
                         )}
                       </div>
                       {s.content && <p className="mt-2 whitespace-pre-wrap rounded bg-slate-50 p-2 text-sm">{s.content}</p>}
+                      {s.storage_key && (
+                        <p className="mt-1 text-xs text-slate-600">
+                          Attachment:{" "}
+                          <a href={fileUrl(s.storage_key)} target="_blank" rel="noreferrer" className="text-sky-700 underline">
+                            {s.original_filename ?? "download"}
+                          </a>
+                        </p>
+                      )}
                       {s.status !== "GRADED" && (
                         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                           <input
                             type="number"
                             min={0}
+                            step="0.25"
                             max={selected.total_marks}
                             placeholder={`Score /${selected.total_marks}`}
                             value={grades[s.id]?.score ?? ""}

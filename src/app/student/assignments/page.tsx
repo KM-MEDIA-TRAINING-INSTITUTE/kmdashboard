@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { ApiError } from "@/lib/api/client";
-import { studentApi, type Assignment, type StudentOffering, type Submission } from "@/lib/api/academic";
+import { studentApi, fileUrl, type Assignment, type StudentOffering, type Submission } from "@/lib/api/academic";
 
 const STATUS_META: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700",
@@ -21,6 +21,7 @@ function AssignmentsInner() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Record<string, Submission[]>>({});
   const [answer, setAnswer] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, File | null>>({});
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,8 +88,9 @@ function AssignmentsInner() {
     setMsg(null);
     setError(null);
     try {
-      await studentApi.submitAssignment(a.id, { content: answer[a.id] ?? "" });
+      await studentApi.submitAssignment(a.id, { content: answer[a.id] ?? "", file: files[a.id] ?? null });
       setMsg(`Submitted “${a.title}”.`);
+      setFiles((prev) => ({ ...prev, [a.id]: null }));
       await loadAssignments(offeringId);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Submission failed.");
@@ -179,23 +181,50 @@ function AssignmentsInner() {
                         {mine.length} of {a.max_attempts} attempts used
                       </p>
                     )}
+                    {latest?.storage_key && (
+                      <p className="mt-1 text-xs text-slate-600">
+                        Attachment:{" "}
+                        <a
+                          href={fileUrl(latest.storage_key)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-sky-700 underline"
+                        >
+                          {latest.original_filename ?? "download"}
+                        </a>
+                      </p>
+                    )}
 
                     {attemptsLeft > 0 && a.status === "PUBLISHED" && (
                       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <label className="sr-only" htmlFor={`answer-${a.id}`}>
-                          Your answer
-                        </label>
-                        <textarea
-                          id={`answer-${a.id}`}
-                          rows={3}
-                          value={answer[a.id] ?? ""}
-                          onChange={(e) => setAnswer((prev) => ({ ...prev, [a.id]: e.target.value }))}
-                          placeholder="Type your submission…"
-                          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                        />
+                        <div className="flex-1 space-y-2">
+                          <label className="sr-only" htmlFor={`answer-${a.id}`}>
+                            Your answer
+                          </label>
+                          <textarea
+                            id={`answer-${a.id}`}
+                            rows={3}
+                            value={answer[a.id] ?? ""}
+                            onChange={(e) => setAnswer((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                            placeholder="Type your submission…"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                          />
+                          <label className="flex items-center gap-2 text-xs text-slate-600">
+                            <span className="rounded-lg border border-slate-300 px-3 py-1.5">
+                              Attach file
+                            </span>
+                            <input
+                              id={`file-${a.id}`}
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => setFiles((prev) => ({ ...prev, [a.id]: e.target.files?.[0] ?? null }))}
+                            />
+                            <span className="truncate">{files[a.id]?.name ?? "optional — pdf, doc, ppt, xls, zip, txt, images, mp4, audio (max 25 MB)"}</span>
+                          </label>
+                        </div>
                         <button
                           onClick={() => submit(a)}
-                          disabled={busy === a.id || !(answer[a.id] ?? "").trim()}
+                          disabled={busy === a.id || (!(answer[a.id] ?? "").trim() && !files[a.id])}
                           className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
                         >
                           {busy === a.id ? "Submitting…" : "Submit"}

@@ -9,7 +9,7 @@ import { authApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 
 const RULES = [
-  { label: "At least 12 characters", test: (p: string) => p.length >= 12 },
+  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
   { label: "Upper and lower case letters", test: (p: string) => /[A-Z]/.test(p) && /[a-z]/.test(p) },
   { label: "At least one digit", test: (p: string) => /\d/.test(p) },
   { label: "At least one symbol", test: (p: string) => /[^A-Za-z0-9]/.test(p) },

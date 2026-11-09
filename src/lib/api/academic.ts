@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { api, apiForm, apiOrigin } from "./client";
 
 /**
  * Phase 7 academic delivery API surface.
@@ -137,6 +137,14 @@ export interface Submission {
   graded_at: string | null;
 }
 
+export type QuestionType =
+  | "SINGLE_CHOICE"
+  | "MULTIPLE_CHOICE"
+  | "TRUE_FALSE"
+  | "SHORT_ANSWER"
+  | "LONG_ANSWER"
+  | "FILE_UPLOAD";
+
 export interface AssessmentQuestionDto {
   id: string;
   question_type: string;
@@ -145,8 +153,19 @@ export interface AssessmentQuestionDto {
   marks: number;
   order_index: number;
   is_required: boolean;
-  options?: { id: string; option_text: string; is_correct?: boolean }[];
+  options?: { id: string; option_text: string; is_correct?: boolean; order_index?: number }[];
   model_answer?: string | null;
+}
+
+/** Payload accepted by POST/PATCH /assessments/{id}/questions. */
+export interface QuestionInput {
+  question_type: QuestionType;
+  prompt: string;
+  marks: number;
+  options?: { option_text: string; is_correct: boolean }[] | null;
+  model_answer?: string | null;
+  help_text?: string | null;
+  is_required?: boolean;
 }
 
 export interface Assessment {
@@ -178,6 +197,32 @@ export interface Attempt {
   score: number | null;
   percentage: number | null;
   time_spent_seconds: number | null;
+}
+
+/** One answer in a staff review payload (keys revealed server-side). */
+export interface AttemptAnswerReview {
+  question_id: string;
+  prompt: string | null;
+  question_type: string | null;
+  question_marks: number | null;
+  selected_option_ids: string[];
+  selected_option_texts?: (string | null)[];
+  answer_text: string | null;
+  is_correct: boolean | null;
+  marks_awarded: number | null;
+  correct_option_ids?: string[];
+  model_answer?: string | null;
+}
+
+export type AttemptReview = Attempt & {
+  assessment: Record<string, unknown>;
+  answers: AttemptAnswerReview[];
+};
+
+/** Absolute URL for a stored submission/attachment (storage_key is either a
+ * local /uploads path or a full Cloudinary URL). */
+export function fileUrl(storageKey: string): string {
+  return storageKey.startsWith("/") ? `${apiOrigin()}${storageKey}` : storageKey;
 }
 
 export interface GradebookRow {
@@ -323,15 +368,32 @@ export const assessmentsApi = {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  addQuestion: (id: string, body: Record<string, unknown>) =>
+  addQuestion: (id: string, body: QuestionInput) =>
     api<{ id: string }>(`/assessments/${id}/questions`, {
       method: "POST",
       body: JSON.stringify(body),
+    }),
+  /** Staff DTO with full question paper (keys included). */
+  get: (id: string) => api<Assessment>(`/assessments/${id}`),
+  updateQuestion: (id: string, questionId: string, body: Partial<QuestionInput>) =>
+    api<Assessment>(`/assessments/${id}/questions/${questionId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteQuestion: (id: string, questionId: string) =>
+    api<Assessment>(`/assessments/${id}/questions/${questionId}`, { method: "DELETE" }),
+  reorderQuestions: (id: string, orderedQuestionIds: string[]) =>
+    api<Assessment>(`/assessments/${id}/questions/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ ordered_question_ids: orderedQuestionIds }),
     }),
   publish: (id: string) => api<{ status: string }>(`/assessments/${id}/publish`, { method: "POST" }),
   open: (id: string) => api<{ status: string }>(`/assessments/${id}/open`, { method: "POST" }),
   close: (id: string) => api<{ status: string }>(`/assessments/${id}/close`, { method: "POST" }),
   attempts: (id: string) => api<Attempt[]>(`/assessments/${id}/attempts`),
+  /** Staff grading view: attempt + every answer with prompt and keys. */
+  attemptReview: (attemptId: string) =>
+    api<AttemptReview>(`/assessment-attempts/${attemptId}/review`),
   gradeAttempt: (attemptId: string, question_marks: Record<string, number>) =>
     api<Attempt>(`/assessment-attempts/${attemptId}/grade`, {
       method: "POST",
@@ -357,11 +419,14 @@ export const studentApi = {
   /** The signed-in student's entitled offerings (dashboard scoping rules). */
   offerings: () => api<StudentOffering[]>("/student/offerings"),
   assignments: (offeringId: string) => api<Assignment[]>(`/student/offerings/${offeringId}/assignments`),
-  submitAssignment: (assignmentId: string, body: { content?: string; file_name?: string; file_mime?: string; file_size?: number }) =>
-    api<Submission>(`/student/assignments/${assignmentId}/submit`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+  submitAssignment: (assignmentId: string, body: { content?: string; file?: File | null }) => {
+    // Multipart: attachment bytes travel with the content field; the backend
+    // validates and stores the real file.
+    const form = new FormData();
+    if (body.content) form.set("content", body.content);
+    if (body.file) form.set("file", body.file);
+    return apiForm<Submission>(`/student/assignments/${assignmentId}/submit`, form);
+  },
   mySubmissions: (assignmentId: string) => api<Submission[]>(`/student/assignments/${assignmentId}/submissions`),
   assessments: (offeringId: string) => api<Assessment[]>(`/student/offerings/${offeringId}/assessments`),
   assessment: (id: string) => api<Assessment>(`/student/assessments/${id}`),
