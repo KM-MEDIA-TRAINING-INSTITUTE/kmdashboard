@@ -19,7 +19,14 @@ export interface TokenPair {
   user: UserSummary;
 }
 
-/** Payload of GET /auth/me. */
+export interface ProgramBrief {
+  id: string;
+  slug: string;
+  code: string;
+  title: string;
+}
+
+/** Payload of GET /auth/me and GET /users. */
 export interface UserOut {
   id: string;
   email: string;
@@ -29,6 +36,34 @@ export interface UserOut {
   is_active: boolean;
   must_change_password: boolean;
   roles: Role[];
+  assigned_programs?: ProgramBrief[];
+  created_at?: string | null;
+}
+
+export interface StaffCreatePayload {
+  email: string;
+  full_name: string;
+  phone?: string;
+  role?: Role;
+  default_password?: string;
+  program_ids?: string[];
+}
+
+export interface StaffCreatedResponse {
+  user: UserOut;
+  temporary_password: string;
+}
+
+export interface AdminPasswordResetResponse {
+  temporary_password: string;
+}
+
+export interface UserStatusOut {
+  id: string;
+  email: string;
+  is_active: boolean;
+  email_verified: boolean;
+  phone_verified: boolean;
 }
 
 export interface SessionOut {

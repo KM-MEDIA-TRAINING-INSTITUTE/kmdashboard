@@ -310,8 +310,7 @@ export default function StudentDetailPage() {
                   </code>
                 </p>
                 <p className="mt-2 text-xs text-emerald-700">
-                  The student must change this on first login. Shown once — it is
-                  not stored or emailed in plain text.
+                  Credentials have also been sent to the student via email. The student must change their password on first login.
                 </p>
                 <button
                   onClick={() => setCredentials(null)}

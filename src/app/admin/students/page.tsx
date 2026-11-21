@@ -368,6 +368,9 @@ export default function AdminStudentsPage() {
                     <p className="mt-1 text-sm text-emerald-700">
                       Index: <span className="font-mono">{addResult.student.index_number}</span>
                     </p>
+                    <p className="mt-1 text-xs text-emerald-600">
+                      Login credentials have been sent to <span className="font-semibold">{addResult.student.email}</span> via email.
+                    </p>
                   </div>
                   <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
                     <p className="text-xs font-medium text-amber-800 uppercase">Temporary Password (share with student)</p>

@@ -51,6 +51,16 @@ function AdminInner() {
           <p className="mt-3 text-xs font-medium text-slate-900">Open register →</p>
         </a>
         <a
+          href="/admin/staff"
+          className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
+        >
+          <h2 className="text-sm font-semibold text-slate-900">Staff &amp; Trainers</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Provision trainer and staff accounts with temporary credentials that force password update on first login. Manage roles and status.
+          </p>
+          <p className="mt-3 text-xs font-medium text-slate-900">Manage staff →</p>
+        </a>
+        <a
           href="/admin/academics"
           className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
         >

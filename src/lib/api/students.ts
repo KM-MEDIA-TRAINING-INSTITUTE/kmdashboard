@@ -240,12 +240,16 @@ export const studentsApi = {
   },
 
   /**
-   * Admin-issued temporary credential. Revokes the student's active sessions
-   * and returns the one-time password so it can be handed over directly — the
-   * reliable path when automated email/SMS delivery is unavailable.
+   * Admin-issued temporary credential. Revokes the student's active sessions,
+   * delivers the new temporary password to the student via email & SMS, and
+   * returns the one-time password for immediate admin handover.
    */
-  resetCredentials(userId: string): Promise<{ temporary_password: string; must_change_password: boolean }> {
+  resetCredentials(userId: string): Promise<{ temporary_password: string; must_change_password: boolean; email_sent?: boolean }> {
     return api(`/users/${userId}/password-reset`, { method: "POST" });
+  },
+
+  sendCredentials(userId: string): Promise<{ temporary_password: string; must_change_password: boolean; email_sent?: boolean }> {
+    return api(`/users/${userId}/send-credentials`, { method: "POST" });
   },
 };
 

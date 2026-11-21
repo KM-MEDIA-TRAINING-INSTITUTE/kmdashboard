@@ -54,6 +54,7 @@ function AdminInner() {
   const quick = [
     { label: "Review applications", href: "/admin/applications" },
     { label: "Students", href: "/admin/students" },
+    { label: "Staff & Trainers", href: "/admin/staff" },
     { label: "Finance", href: "/admin/finance" },
   ];
 
