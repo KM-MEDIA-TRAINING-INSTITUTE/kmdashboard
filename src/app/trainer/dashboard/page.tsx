@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import { useAuth } from "@/components/auth-provider";
 import { ApiError } from "@/lib/api/client";
 import {
   assignmentsApi,
@@ -26,6 +27,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 }
 
 function TrainerDashboardInner() {
+  const { user } = useAuth();
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [todayClasses, setTodayClasses] = useState<ClassSession[]>([]);
   const [upcoming, setUpcoming] = useState<ClassSession[]>([]);
@@ -102,9 +104,30 @@ function TrainerDashboardInner() {
       <div>
         <h1 className="text-lg font-semibold text-slate-900">Teaching dashboard</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Your live academic workload across assigned offerings.
+          Your live academic workload across assigned offerings and programmes.
         </p>
       </div>
+
+      {user?.assigned_programs && user.assigned_programs.length > 0 && (
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-900 mb-2">
+            My Assigned Academic Programmes
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {user.assigned_programs.map((p) => (
+              <span
+                key={p.id}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm border border-indigo-200/60"
+              >
+                <span className="rounded bg-indigo-100 px-1.5 py-0.5 font-mono text-[11px] text-indigo-700">
+                  {p.code}
+                </span>
+                {p.title}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
@@ -114,7 +137,8 @@ function TrainerDashboardInner() {
         <p className="text-sm text-slate-400">Loading…</p>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <StatCard label="Assigned programmes" value={user?.assigned_programs?.length ?? 0} />
             <StatCard label="Today's classes" value={todayClasses.length} />
             <StatCard label="My offerings" value={offerings.length} />
             <StatCard label="Students" value={students} />

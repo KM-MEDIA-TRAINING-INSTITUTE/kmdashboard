@@ -73,6 +73,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Applications", href: "/admin/applications", roles: ["ADMIN"], icon: "inbox" },
       { label: "Students", href: "/admin/students", roles: ["ADMIN"], icon: "users" },
       { label: "Admissions", href: "/admin/admissions", roles: ["ADMIN"], icon: "door" },
+      { label: "Staff & Trainers", href: "/admin/staff", roles: ["ADMIN", "SUPERADMIN"], icon: "users" },
       { label: "Programmes", href: "/admin/programs", roles: ["ADMIN", "SUPERADMIN"], icon: "layers" },
       { label: "Academic structure", href: "/admin/academics", roles: ["ADMIN"], icon: "layers" },
       { label: "Course review", href: "/admin/courses", roles: ["ADMIN"], icon: "review" },
@@ -84,7 +85,7 @@ export const NAVIGATION: NavSection[] = [
   {
     heading: "Account",
     items: [
-      { label: "My profile", href: "/profile", roles: ["STUDENT"], icon: "users" },
+      { label: "My profile", href: "/profile", icon: "users" },
       { label: "My finance", href: "/student/finance", roles: ["STUDENT"], icon: "wallet" },
       { label: "Sessions", href: "/sessions", icon: "lock" },
       { label: "Notifications", href: "/dashboard/student?focus=notifications", roles: ["STUDENT"], icon: "bell" },
@@ -350,11 +351,9 @@ function SidebarBody({
           <div role="menu" className="absolute bottom-full left-3 right-3 z-40 mb-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
             <p className="px-3 py-1.5 text-xs text-slate-400">{user?.email}</p>
             <p className="px-3 pb-2 text-xs text-slate-400">{roles.join(" · ")}</p>
-            {roles.includes("STUDENT") && (
-              <Link href="/profile" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-                My profile
-              </Link>
-            )}
+            <Link href="/profile" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
+              My profile
+            </Link>
             <Link href="/sessions" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
               Active sessions
             </Link>

@@ -4,8 +4,9 @@ import { Suspense, useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FullPageSpinner } from "@/components/route-guard";
-import { homeForRole, useAuth } from "@/components/auth-provider";
+import { canRoleAccessRoute, homeForRole, useAuth } from "@/components/auth-provider";
 import { ApiError } from "@/lib/api/client";
+import type { Role } from "@/lib/api/types";
 
 const REASON_BANNERS: Record<string, string> = {
   expired: "Your session expired. Please sign in again.",
@@ -28,21 +29,23 @@ function LoginForm() {
   const reason = params.get("reason");
 
   // Where to land after a successful sign-in. A forced password change always
-  // wins; a captured `next` is honored only when it is not another role's
-  // dashboard (a stale ?next= from a previous session must not mis-land the
-  // new user — staff can still navigate to preview dashboards afterwards).
-  const landingFor = (mustChange: boolean, home: string) => {
+  // wins; a captured `next` is honored only when the authenticated user's roles
+  // actually permit access to that route (a stale ?next= from a previous admin
+  // session must not mis-land a trainer or student into a 403 Access Denied screen).
+  const landingFor = (mustChange: boolean, home: string, roles: Role[]) => {
     if (mustChange) return "/change-password";
     if (next && next !== "/login") {
-      const dash = next.match(/^\/dashboard\/([a-z]+)/);
-      if (!dash || next === home) return next;
+      if (canRoleAccessRoute(roles, next)) {
+        const dash = next.match(/^\/dashboard\/([a-z]+)/);
+        if (!dash || next === home) return next;
+      }
     }
     return home;
   };
 
   useEffect(() => {
     if (status === "authenticated" && user) {
-      router.replace(landingFor(user.must_change_password, homeForRole(user.roles)));
+      router.replace(landingFor(user.must_change_password, homeForRole(user.roles), user.roles));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, user, next, router]);
@@ -54,7 +57,7 @@ function LoginForm() {
     try {
       const pair = await login(identifier.trim(), password);
       router.replace(
-        landingFor(pair.must_change_password, homeForRole(pair.user.roles))
+        landingFor(pair.must_change_password, homeForRole(pair.user.roles), pair.user.roles)
       );
     } catch (err) {
       setError(
