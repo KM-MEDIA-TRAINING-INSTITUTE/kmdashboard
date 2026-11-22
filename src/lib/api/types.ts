@@ -7,6 +7,7 @@ export interface UserSummary {
   roles: Role[];
   must_change_password: boolean;
   avatar_url?: string | null;
+  assigned_programs?: ProgramBrief[];
 }
 
 /** Payload of POST /auth/login and POST /auth/refresh. */

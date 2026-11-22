@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           roles: me.roles,
           must_change_password: me.must_change_password,
           avatar_url: me.avatar_url ?? null,
+          assigned_programs: me.assigned_programs ?? [],
         });
         setStatus("authenticated");
       } catch {
@@ -88,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       roles: me.roles,
       must_change_password: me.must_change_password,
       avatar_url: me.avatar_url ?? null,
+      assigned_programs: me.assigned_programs ?? [],
     });
   }, []);
 
@@ -116,4 +118,52 @@ export function homeForRole(roles: Role[]): string {
   if (roles.includes("TRAINER")) return "/dashboard/trainer";
   if (roles.includes("STUDENT")) return "/dashboard/student";
   return "/student";
+}
+
+/** Checks whether a user with the given roles is permitted to access a given path. */
+export function canRoleAccessRoute(roles: Role[], path: string | null | undefined): boolean {
+  if (!path || path === "/" || path === "/login") return true;
+
+  // Strip query string and hash
+  const clean = path.split("?")[0].split("#")[0];
+
+  // Admin section: strictly requires ADMIN or SUPERADMIN
+  if (clean.startsWith("/admin") || clean.startsWith("/dashboard/admin")) {
+    return roles.includes("ADMIN") || roles.includes("SUPERADMIN");
+  }
+
+  // Superadmin dashboard: strictly requires SUPERADMIN
+  if (clean.startsWith("/dashboard/superadmin")) {
+    return roles.includes("SUPERADMIN");
+  }
+
+  // Trainer dashboard and teaching workspace
+  if (clean.startsWith("/trainer") || clean.startsWith("/dashboard/trainer")) {
+    return (
+      roles.includes("TRAINER") ||
+      roles.includes("ADMIN") ||
+      roles.includes("SUPERADMIN")
+    );
+  }
+
+  // Student dashboard: requires STUDENT, ADMIN, or SUPERADMIN
+  if (clean.startsWith("/dashboard/student")) {
+    return (
+      roles.includes("STUDENT") ||
+      roles.includes("ADMIN") ||
+      roles.includes("SUPERADMIN")
+    );
+  }
+
+  // Student workspace
+  if (clean.startsWith("/student")) {
+    return (
+      roles.includes("STUDENT") ||
+      roles.includes("ADMIN") ||
+      roles.includes("SUPERADMIN")
+    );
+  }
+
+  // Common authenticated routes (profile, sessions, change-password)
+  return true;
 }
