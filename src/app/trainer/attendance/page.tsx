@@ -37,7 +37,14 @@ function AttendanceInner() {
         const rows = await offeringsApi.mine();
         if (!cancelled) {
           setOfferings(rows);
-          if (rows.length > 0) setOfferingId(rows[0].id);
+          if (rows.length > 0) {
+            const wantedOff = params.get("offering");
+            if (wantedOff && rows.some((r) => r.id === wantedOff)) {
+              setOfferingId(wantedOff);
+            } else {
+              setOfferingId(rows[0].id);
+            }
+          }
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "Could not load offerings.");
