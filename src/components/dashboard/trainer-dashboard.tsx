@@ -1,10 +1,25 @@
 "use client";
 
+import {
+  Activity,
+  Award,
+  BookOpen,
+  Calendar,
+  CheckCircle2,
+  ClipboardCheck,
+  Clock,
+  FileCheck,
+  GraduationCap,
+  Layers,
+  Users,
+} from "lucide-react";
 import { RouteGuard } from "@/components/route-guard";
 import { DashboardShell } from "@/components/dashboard/shell";
 import {
+  ActivityFeed,
   AlertBanner,
   DataTable,
+  EmptyState,
   ErrorState,
   SectionCard,
   StatCard,
@@ -13,9 +28,9 @@ import {
   formatPercent,
 } from "@/components/dashboard/ui";
 import { ChartCard } from "@/components/dashboard/charts";
-import { ActivityFeed } from "@/components/dashboard/ui";
 import { useDashboard, useDashboardFocus } from "@/components/dashboard/use-dashboard";
 import { useAuth } from "@/components/auth-provider";
+import { StaggerGrid, StaggerItem } from "@/components/ui/motion";
 
 /**
  * Trainer dashboard — "What do I teach, review, grade, monitor today?"
@@ -43,7 +58,6 @@ function TrainerInner() {
   const { user } = useAuth();
   const { status, data, error, retry } = useDashboard("trainer");
   const loading = status === "loading";
-  // Real targets for the API's ?focus=… links (schedule, grading, attendance…).
   useDashboardFocus(status === "ready");
 
   const assignedPrograms =
@@ -83,11 +97,21 @@ function TrainerInner() {
           assignedPrograms.length > 0
             ? `Assigned programme${assignedPrograms.length > 1 ? "s" : ""}: ${assignedPrograms.map((p) => `${p.title} (${p.code})`).join(", ")}`
             : "What to teach, review, grade and monitor today.",
-        meta: data ? `Period: ${data.date_range.preset.replace(/_/g, " ")} · updated ${new Date(data.generated_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : undefined,
+        meta: data
+          ? `Period: ${data.date_range.preset.replace(/_/g, " ")} · updated ${new Date(
+              data.generated_at
+            ).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+          : undefined,
       }}
       quickActions={quick}
     >
-      {status === "error" && <ErrorState title="Could not load your dashboard" detail={error ?? undefined} onRetry={retry} />}
+      {status === "error" && (
+        <ErrorState
+          title="Could not load your dashboard"
+          detail={error ?? undefined}
+          onRetry={retry}
+        />
+      )}
 
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" aria-hidden="true">
@@ -102,91 +126,120 @@ function TrainerInner() {
           {data.alerts.length > 0 && (
             <div className="space-y-2">
               {data.alerts.map((a) => (
-                <AlertBanner key={a.id} severity={a.severity} title={a.title} detail={a.detail} link={a.link} />
+                <AlertBanner
+                  key={a.id}
+                  severity={a.severity}
+                  title={a.title}
+                  detail={a.detail}
+                  link={a.link}
+                />
               ))}
             </div>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-            <StatCard
-              label="Assigned programmes"
-              value={assignedPrograms.length}
-              tone={assignedPrograms.length > 0 ? "good" : "warn"}
-            />
-            <StatCard label="Active courses" value={data.summary.active_courses ?? 0} />
-            <StatCard label="Students" value={data.summary.students ?? 0} />
-            <StatCard label="Today's classes" value={data.summary.todays_classes ?? 0} />
-            <StatCard
-              label="Pending grades"
-              value={data.summary.pending_grading?.total ?? 0}
-              tone={(data.summary.pending_grading?.total ?? 0) > 0 ? "warn" : "good"}
-            />
-            <StatCard
-              label="Avg attendance"
-              value={formatPercent(data.summary.average_attendance)}
-              tone={(data.summary.average_attendance ?? 100) < 70 ? "bad" : (data.summary.average_attendance ?? 100) < 80 ? "warn" : "good"}
-            />
-          </div>
+          <StaggerGrid className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <StaggerItem>
+              <StatCard
+                label="Assigned programmes"
+                value={assignedPrograms.length}
+                icon={<GraduationCap className="h-4 w-4" />}
+                tone={assignedPrograms.length > 0 ? "good" : "warn"}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label="Active courses"
+                value={data.summary.active_courses ?? 0}
+                icon={<BookOpen className="h-4 w-4" />}
+                tone="brand"
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label="Students"
+                value={data.summary.students ?? 0}
+                icon={<Users className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label="Today's classes"
+                value={data.summary.todays_classes ?? 0}
+                icon={<Calendar className="h-4 w-4" />}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label="Pending grades"
+                value={data.summary.pending_grading?.total ?? 0}
+                icon={<ClipboardCheck className="h-4 w-4" />}
+                tone={(data.summary.pending_grading?.total ?? 0) > 0 ? "warn" : "good"}
+              />
+            </StaggerItem>
+            <StaggerItem>
+              <StatCard
+                label="Avg attendance"
+                value={formatPercent(data.summary.average_attendance)}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                tone={
+                  (data.summary.average_attendance ?? 100) < 70
+                    ? "bad"
+                    : (data.summary.average_attendance ?? 100) < 80
+                      ? "warn"
+                      : "good"
+                }
+              />
+            </StaggerItem>
+          </StaggerGrid>
 
-          {/* Assigned Academic Programmes */}
           <SectionCard
             id="programmes"
             title="My Assigned Programmes"
             description="Academic programmes you are appointed to teach and facilitate"
+            icon={<Layers className="h-4 w-4" />}
           >
             {assignedPrograms.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-200 p-6 text-center">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </div>
-                <p className="mt-2 text-sm font-semibold text-slate-700">No academic programmes assigned yet</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  When an administrator assigns you to one or more academic programmes, they will appear here.
-                </p>
-              </div>
+              <EmptyState
+                icon={<Layers className="h-5 w-5" />}
+                title="No academic programmes assigned yet"
+                detail="When an administrator assigns you to one or more academic programmes, they will appear here."
+              />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {assignedPrograms.map((p) => (
                   <div
                     key={p.id}
-                    className="relative flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-300 hover:shadow transition"
+                    className="group relative flex flex-col justify-between rounded-xl border border-slate-200/80 bg-white p-4 shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-[var(--shadow-card-hover)]"
                   >
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="inline-flex items-center rounded-md bg-brand-50 px-2.5 py-0.5 font-mono text-xs font-bold text-brand-700 ring-1 ring-brand-700/10">
+                      <div className="mb-2.5 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center rounded-md bg-brand-50 px-2.5 py-0.5 font-mono text-xs font-bold text-brand-700 ring-1 ring-brand-600/15">
                           {p.code}
                         </span>
                         {p.certificate && (
-                          <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
                             {p.certificate}
                           </span>
                         )}
                       </div>
-                      <h3 className="font-semibold text-slate-900 text-sm leading-snug">
+                      <h3 className="text-sm font-semibold leading-snug text-ink-900 group-hover:text-brand-700 transition-colors">
                         {p.title}
                       </h3>
-                      {p.category && (
-                        <p className="mt-1 text-xs text-slate-500">{p.category}</p>
-                      )}
+                      {p.category && <p className="mt-1 text-xs text-slate-500">{p.category}</p>}
                       {p.duration_weeks && (
                         <p className="mt-0.5 text-xs text-slate-400">
                           Duration: {p.duration_weeks} weeks
                         </p>
                       )}
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
                       <a
                         href="/trainer"
-                        className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
+                        className="font-semibold text-brand-600 hover:text-brand-700 hover:underline"
                       >
                         Teaching courses →
                       </a>
-                      <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
-                        Assigned
-                      </span>
+                      <StatusBadge status="ACTIVE" label="Assigned" />
                     </div>
                   </div>
                 ))}
@@ -200,7 +253,12 @@ function TrainerInner() {
                 id="schedule"
                 title="Today's schedule"
                 description="Sessions for today across your courses"
-                action={<a href="/trainer/classes" className="text-xs font-medium text-brand-700 hover:underline">All classes →</a>}
+                icon={<Calendar className="h-4 w-4" />}
+                action={
+                  <a href="/trainer/classes" className="text-xs font-semibold text-brand-600 hover:underline">
+                    All classes →
+                  </a>
+                }
               >
                 <UpcomingList
                   items={data.upcoming.filter((u) => u.kind === "class_session")}
@@ -213,21 +271,32 @@ function TrainerInner() {
               id="grading"
               title="Grading queue"
               description="Oldest deadlines first"
-              action={<a href="/trainer/gradebook" className="text-xs font-medium text-brand-700 hover:underline">Open gradebook →</a>}
+              icon={<Award className="h-4 w-4" />}
+              action={
+                <a href="/trainer/gradebook" className="text-xs font-semibold text-brand-600 hover:underline">
+                  Open gradebook →
+                </a>
+              }
             >
               {data.summary.pending_grading?.total ? (
-                <ul className="space-y-2 text-sm">
+                <ul className="space-y-2.5 text-sm">
                   {gradingQueue.slice(0, 6).map((g) => (
-                    <li key={String(g.id)} className="rounded-lg border border-slate-200 p-3">
+                    <li
+                      key={String(g.id)}
+                      className="rounded-xl border border-slate-200/80 bg-white p-3.5 transition-colors hover:border-brand-200"
+                    >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate font-medium text-slate-900">{g.title}</p>
-                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                        <p className="truncate font-semibold text-ink-900">{g.title}</p>
+                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold tabular-nums text-amber-800 ring-1 ring-amber-600/15">
                           {String((g as { count?: number }).count ?? "")}
                         </span>
                       </div>
                       {g.subtitle && <p className="mt-0.5 text-xs text-slate-500">{g.subtitle}</p>}
                       {g.link && (
-                        <a href={g.link} className="mt-1 inline-block text-xs font-medium text-brand-700 hover:underline">
+                        <a
+                          href={g.link}
+                          className="mt-1.5 inline-block text-xs font-semibold text-brand-600 hover:underline"
+                        >
                           Review submissions →
                         </a>
                       )}
@@ -235,7 +304,11 @@ function TrainerInner() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-400">Nothing awaiting grading. 🎉</p>
+                <EmptyState
+                  icon={<CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  title="All caught up"
+                  detail="Nothing awaiting grading right now."
+                />
               )}
             </SectionCard>
           </div>
@@ -244,7 +317,12 @@ function TrainerInner() {
             id="courses"
             title="My courses"
             description="Roster size and pooled attendance per offering — open a course to manage its classes"
-            action={<a href="/trainer" className="text-xs font-medium text-brand-700 hover:underline">Manage courses →</a>}
+            icon={<BookOpen className="h-4 w-4" />}
+            action={
+              <a href="/trainer" className="text-xs font-semibold text-brand-600 hover:underline">
+                Manage courses →
+              </a>
+            }
           >
             <DataTable<CourseRow>
               caption="Your course offerings"
@@ -255,15 +333,29 @@ function TrainerInner() {
                   render: (r) => (
                     <a
                       href={`/trainer/classes?offering=${encodeURIComponent(r.offering_id)}`}
-                      className="font-medium text-brand-700 hover:underline"
+                      className="font-semibold text-brand-700 hover:underline"
                     >
                       {r.course}
                     </a>
                   ),
                 },
-                { key: "code", header: "Offering", render: (r) => <span className="font-mono text-xs text-slate-500">{r.code}</span> },
-                { key: "students", header: "Students", render: (r) => r.students },
-                { key: "attendance", header: "Attendance", render: (r) => formatPercent(r.attendance_rate) },
+                {
+                  key: "code",
+                  header: "Offering",
+                  render: (r) => <span className="font-mono text-xs text-slate-500">{r.code}</span>,
+                },
+                {
+                  key: "students",
+                  header: "Students",
+                  render: (r) => <span className="tabular-nums font-medium">{r.students}</span>,
+                },
+                {
+                  key: "attendance",
+                  header: "Attendance",
+                  render: (r) => (
+                    <span className="tabular-nums font-medium">{formatPercent(r.attendance_rate)}</span>
+                  ),
+                },
                 { key: "mode", header: "Mode", hideBelow: "md", render: (r) => r.delivery_mode },
                 { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
               ]}
@@ -275,36 +367,69 @@ function TrainerInner() {
 
           <div id="attendance" className="grid gap-4 lg:grid-cols-2">
             {data.charts.slice(0, 2).map((c) => (
-              <ChartCard key={c.id} title={c.title} description={c.description} type={c.type} series={c.series} meta={c.meta} />
+              <ChartCard
+                key={c.id}
+                title={c.title}
+                description={c.description}
+                type={c.type}
+                series={c.series}
+                meta={c.meta}
+              />
             ))}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <SectionCard id="classes" title="Recent sessions" description="Attendance records per completed session">
+            <SectionCard
+              id="classes"
+              title="Recent sessions"
+              description="Attendance records per completed session"
+              icon={<Activity className="h-4 w-4" />}
+            >
               <ActivityFeed items={data.recent_activity} />
             </SectionCard>
             <SectionCard
               id="assessments"
               title="Assignments & assessments"
               description="Counts across your offerings"
-              action={<a href="/trainer/assessments" className="text-xs font-medium text-brand-700 hover:underline">Manage assessments →</a>}
+              icon={<FileCheck className="h-4 w-4" />}
+              action={
+                <a href="/trainer/assessments" className="text-xs font-semibold text-brand-600 hover:underline">
+                  Manage assessments →
+                </a>
+              }
             >
               <dl className="grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg border border-slate-100 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-slate-400">Assignments published</dt>
-                  <dd className="mt-1 text-xl font-semibold">{data.summary.assignments?.published ?? 0}</dd>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Assignments published
+                  </dt>
+                  <dd className="mt-1 text-xl font-bold tabular-nums text-ink-900">
+                    {data.summary.assignments?.published ?? 0}
+                  </dd>
                 </div>
-                <div className="rounded-lg border border-slate-100 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-slate-400">Assessments open</dt>
-                  <dd className="mt-1 text-xl font-semibold">{data.summary.assessments?.open ?? 0}</dd>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Assessments open
+                  </dt>
+                  <dd className="mt-1 text-xl font-bold tabular-nums text-ink-900">
+                    {data.summary.assessments?.open ?? 0}
+                  </dd>
                 </div>
-                <div className="rounded-lg border border-slate-100 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-slate-400">Assignment drafts</dt>
-                  <dd className="mt-1 text-xl font-semibold">{data.summary.assignments?.draft ?? 0}</dd>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Assignment drafts
+                  </dt>
+                  <dd className="mt-1 text-xl font-bold tabular-nums text-ink-900">
+                    {data.summary.assignments?.draft ?? 0}
+                  </dd>
                 </div>
-                <div className="rounded-lg border border-slate-100 p-3">
-                  <dt className="text-xs uppercase tracking-wide text-slate-400">Assessment drafts</dt>
-                  <dd className="mt-1 text-xl font-semibold">{data.summary.assessments?.draft ?? 0}</dd>
+                <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    Assessment drafts
+                  </dt>
+                  <dd className="mt-1 text-xl font-bold tabular-nums text-ink-900">
+                    {data.summary.assessments?.draft ?? 0}
+                  </dd>
                 </div>
               </dl>
               {assessmentItems.length > 0 && (

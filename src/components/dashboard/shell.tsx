@@ -4,22 +4,46 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Award,
+  Bell,
+  BookOpen,
+  Calendar,
+  CheckSquare,
+  ChevronDown,
+  ChevronLeft,
+  ClipboardList,
+  Clock,
+  DoorOpen,
+  FileCheck,
+  HelpCircle,
+  Home,
+  Inbox,
+  Layers,
+  Lock,
+  LogOut,
+  Menu,
+  Search,
+  User,
+  Users,
+  Wallet,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { Avatar } from "@/components/avatar";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
+import { MOTION_EASE, PageTransition } from "@/components/ui/motion";
 import type { SearchHit } from "@/lib/api/contracts";
 import type { Role } from "@/lib/api/types";
 
-/** Layout effect on the client (plain effect on the server — no SSR warning). */
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 export interface NavItem {
   label: string;
   href: string;
   icon?: string;
-  /** Show only when the user holds one of these roles (permission-driven nav). */
   roles?: Role[];
-  /** Show only when the user holds at least one of these permission codes. */
   permission?: string;
 }
 
@@ -29,10 +53,7 @@ export interface NavSection {
 }
 
 /**
- * Role-aware navigation. Sections appear only when the user holds a matching
- * role; individual links can be additionally gated by `roles`. The backend
- * remains authoritative for every action these links lead to.
- * Routes are preserved exactly; redesign only grouped + iconified entries.
+ * Role-aware navigation. Routes and permission filters preserved exactly.
  */
 export const NAVIGATION: NavSection[] = [
   {
@@ -86,7 +107,7 @@ export const NAVIGATION: NavSection[] = [
   {
     heading: "Account",
     items: [
-      { label: "My profile", href: "/profile", icon: "users" },
+      { label: "My profile", href: "/profile", icon: "user" },
       { label: "My finance", href: "/student/finance", roles: ["STUDENT"], icon: "wallet" },
       { label: "Sessions", href: "/sessions", icon: "lock" },
       { label: "Notifications", href: "/dashboard/student?focus=notifications", roles: ["STUDENT"], icon: "bell" },
@@ -101,39 +122,44 @@ function firstDashboardFor(roles: Role[]): string {
   return "/dashboard/student";
 }
 
-/**
- * Dependency-free iconography (stroke inherits currentColor) — 24×24 grid,
- * 1.8 stroke, round joins. Names map to NAVIGATION entries only; unknown
- * names render nothing (icon-optional by design).
- */
-const ICON_PATHS: Record<string, string[]> = {
-  home: ["M3 10.5 12 3l9 7.5", "M5 9.5V21h14V9.5"],
-  book: ["M4 5.5A2.5 2.5 0 0 1 6.5 3H20v18H6.5A2.5 2.5 0 0 1 4 18.5z", "M4 18.5A2.5 2.5 0 0 1 6.5 16H20"],
-  layers: ["m12 3 9 5-9 5-9-5z", "m3 13 9 5 9-5", "m3 17.5 9 5 9-5"],
-  users: ["M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2", "M9.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z", "M21 21v-2a4 4 0 0 0-3-3.87", "M15.5 3.13a4 4 0 0 1 0 7.75"],
-  calendar: ["M8 2v4M16 2v4", "M3 6h18v16H3z", "M3 10h18"],
-  clipboard: ["M9 3h6v3H9z", "M15 3h4v18H5V3h4"],
-  check: ["M9 12.5 11.5 15 16 9.5", "M4 5h16v16H4z"],
-  presence: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z", "M12 7v5l3.5 2"],
-  award: ["M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z", "m8.5 13-1.5 8 5-2.5L17 21l-1.5-8"],
-  inbox: ["M3 12h5l2 3h4l2-3h5", "M5 5h14l2 7v7H3v-7z"],
-  door: ["M4 21h16", "M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17", "M14 12h.01"],
-  review: ["m9 11 2 2 4-4.5", "M5 3h14v18l-3.5-2L12 21l-3.5-2L5 21z"],
-  wallet: ["M3 7h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", "M3 7V5a2 2 0 0 1 2-2h11", "M16 13.5h.01"],
-  lock: ["M7 11V7a5 5 0 0 1 10 0v4", "M5 11h14v10H5z"],
-  bell: ["M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9", "M13.7 21a2 2 0 0 1-3.4 0"],
-};
-
 function NavIcon({ name }: { name?: string }) {
-  const paths = ICON_PATHS[name ?? ""];
-  if (!paths) return null;
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      {paths.map((d) => (
-        <path key={d} d={d} strokeLinecap="round" strokeLinejoin="round" />
-      ))}
-    </svg>
-  );
+  const cls = "h-4 w-4 shrink-0";
+  switch (name) {
+    case "home":
+      return <Home className={cls} aria-hidden="true" />;
+    case "book":
+      return <BookOpen className={cls} aria-hidden="true" />;
+    case "layers":
+      return <Layers className={cls} aria-hidden="true" />;
+    case "users":
+      return <Users className={cls} aria-hidden="true" />;
+    case "user":
+      return <User className={cls} aria-hidden="true" />;
+    case "calendar":
+      return <Calendar className={cls} aria-hidden="true" />;
+    case "clipboard":
+      return <ClipboardList className={cls} aria-hidden="true" />;
+    case "check":
+      return <CheckSquare className={cls} aria-hidden="true" />;
+    case "presence":
+      return <Clock className={cls} aria-hidden="true" />;
+    case "award":
+      return <Award className={cls} aria-hidden="true" />;
+    case "inbox":
+      return <Inbox className={cls} aria-hidden="true" />;
+    case "door":
+      return <DoorOpen className={cls} aria-hidden="true" />;
+    case "review":
+      return <FileCheck className={cls} aria-hidden="true" />;
+    case "wallet":
+      return <Wallet className={cls} aria-hidden="true" />;
+    case "lock":
+      return <Lock className={cls} aria-hidden="true" />;
+    case "bell":
+      return <Bell className={cls} aria-hidden="true" />;
+    default:
+      return null;
+  }
 }
 
 function SidebarNav({
@@ -146,53 +172,94 @@ function SidebarNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const [closedGroups, setClosedGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (heading: string) => {
+    setClosedGroups((prev) => ({ ...prev, [heading]: !prev[heading] }));
+  };
+
   return (
-    <nav aria-label="Dashboard" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-      {sections.map((section, i) => (
-        <div key={i}>
-          {section.heading &&
-            (collapsed ? (
-              <p className="mx-3 mb-2.5 border-t border-slate-100" aria-hidden="true" />
-            ) : (
-              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                {section.heading}
-              </p>
-            ))}
-          <ul className="space-y-0.5">
-            {section.items.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href.split("?")[0] + "/"));
-              return (
-                <li key={item.label + item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onNavigate}
-                    title={collapsed ? item.label : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                      collapsed ? "justify-center px-0" : ""
-                    } ${
-                      active
-                        ? "bg-brand-50 font-medium text-brand-800"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+    <nav aria-label="Dashboard" className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+      {sections.map((section, i) => {
+        const heading = section.heading;
+        const isClosed = !collapsed && heading ? Boolean(closedGroups[heading]) : false;
+
+        return (
+          <div key={heading ?? i}>
+            {heading &&
+              (collapsed ? (
+                <div className="mx-3 mb-2.5 border-t border-slate-100" aria-hidden="true" />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(heading)}
+                  aria-expanded={!isClosed}
+                  className="mb-1 flex w-full items-center justify-between rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-ink-700"
+                >
+                  <span>{heading}</span>
+                  <ChevronDown
+                    className={`h-3 w-3 transition-transform duration-200 ${
+                      isClosed ? "-rotate-90" : ""
                     }`}
-                  >
-                    {active && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-500"
-                      />
-                    )}
-                    <NavIcon name={item.icon} />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+                    aria-hidden="true"
+                  />
+                </button>
+              ))}
+
+            <AnimatePresence initial={false}>
+              {!isClosed && (
+                <motion.ul
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.18, ease: MOTION_EASE }}
+                  className="space-y-0.5 overflow-hidden"
+                >
+                  {section.items.map((item) => {
+                    const active =
+                      pathname === item.href ||
+                      (item.href !== "/" && pathname.startsWith(item.href.split("?")[0] + "/"));
+                    return (
+                      <li key={item.label + item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={onNavigate}
+                          title={collapsed ? item.label : undefined}
+                          aria-current={active ? "page" : undefined}
+                          className={`group relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all duration-150 ${
+                            collapsed ? "justify-center px-0" : ""
+                          } ${
+                            active
+                              ? "bg-brand-50/90 font-semibold text-brand-800 shadow-2xs"
+                              : "font-medium text-slate-600 hover:bg-slate-100/80 hover:text-ink-900"
+                          }`}
+                        >
+                          {active && (
+                            <motion.span
+                              layoutId="sidebar-active-bar"
+                              transition={{ duration: 0.2, ease: MOTION_EASE }}
+                              aria-hidden="true"
+                              className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-600"
+                            />
+                          )}
+                          <span
+                            className={`transition-colors ${
+                              active ? "text-brand-600" : "text-slate-400 group-hover:text-ink-700"
+                            }`}
+                          >
+                            <NavIcon name={item.icon} />
+                          </span>
+                          {!collapsed && <span className="truncate">{item.label}</span>}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </motion.ul>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })}
     </nav>
   );
 }
@@ -229,8 +296,15 @@ function GlobalSearch() {
       }
       if (e.key === "Escape") setOpen(false);
     };
+    const onClick = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onClick);
+    };
   }, []);
 
   return (
@@ -240,62 +314,245 @@ function GlobalSearch() {
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label="Search"
-        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-500 hover:border-brand-400 hover:bg-white"
+        className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 text-xs font-medium text-slate-500 transition-colors hover:border-brand-300 hover:bg-white hover:text-ink-900"
       >
-        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-        </svg>
-        <span className="hidden sm:inline">Search</span>
-        <kbd className="hidden rounded border border-slate-200 bg-white px-1 text-[10px] text-slate-400 sm:inline">⌘K</kbd>
+        <Search className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="hidden sm:inline">Search…</span>
+        <kbd className="hidden rounded border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-400 sm:inline">
+          ⌘K
+        </kbd>
       </button>
-      {open && (
-        <div role="dialog" aria-label="Search" className="absolute right-0 z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search courses, students…"
-            aria-label="Search query"
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-          />
-          {hits.length > 0 && (
-            <ul className="mt-2 max-h-80 space-y-1 overflow-auto">
-              {hits.map((h) => (
-                <li key={h.kind + h.id}>
-                  <button
-                    onClick={() => {
-                      setOpen(false);
-                      setQ("");
-                      router.push(h.link);
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-50"
-                  >
-                    <span className="font-medium text-slate-900">{h.title}</span>
-                    <span className="ml-2 text-xs uppercase tracking-wide text-slate-400">{h.kind}</span>
-                    {h.subtitle && <span className="block text-xs text-slate-500">{h.subtitle}</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {q.trim().length >= 2 && hits.length === 0 && (
-            <p className="mt-2 px-1 text-xs text-slate-400">No matches.</p>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: MOTION_EASE }}
+            role="dialog"
+            aria-label="Search"
+            className="absolute right-0 z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200/90 bg-white p-3 shadow-[var(--shadow-popover)] sm:w-96"
+          >
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search courses, students, programmes…"
+                aria-label="Search query"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-sm text-ink-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none"
+              />
+            </div>
+            {hits.length > 0 && (
+              <ul className="mt-2 max-h-80 space-y-1 overflow-auto">
+                {hits.map((h) => (
+                  <li key={h.kind + h.id}>
+                    <button
+                      onClick={() => {
+                        setOpen(false);
+                        setQ("");
+                        router.push(h.link);
+                      }}
+                      className="w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-brand-50"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate font-medium text-ink-900">{h.title}</span>
+                        <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                          {h.kind}
+                        </span>
+                      </div>
+                      {h.subtitle && (
+                        <span className="mt-0.5 block truncate text-xs text-slate-500">
+                          {h.subtitle}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {q.trim().length >= 2 && hits.length === 0 && (
+              <p className="mt-3 px-1 text-center text-xs text-slate-400">No matches found.</p>
+            )}
+            {q.trim().length < 2 && (
+              <p className="mt-2.5 px-1 text-[11px] text-slate-400">
+                Type at least 2 characters to search across the platform.
+              </p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-/** Desktop sidebar collapse preference — shared across every dashboard page. */
+function HelpPopover() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative hidden sm:block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label="Help and support"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-ink-900"
+      >
+        <HelpCircle className="h-4 w-4" aria-hidden="true" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: MOTION_EASE }}
+            className="absolute right-0 z-40 mt-2 w-72 rounded-xl border border-slate-200/90 bg-white p-4 shadow-[var(--shadow-popover)]"
+          >
+            <p className="text-sm font-semibold text-ink-900">KM Media Support</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Learn. Create. Lead. Need help with your account, enrolment, or portal access?
+            </p>
+            <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
+              <Link
+                href="/profile"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-2.5 py-1.5 font-medium text-ink-800 hover:bg-brand-50 hover:text-brand-700"
+              >
+                Account &amp; Profile Settings
+              </Link>
+              <Link
+                href="/sessions"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-2.5 py-1.5 font-medium text-ink-800 hover:bg-brand-50 hover:text-brand-700"
+              >
+                Active Security Sessions
+              </Link>
+              <Link
+                href="/track"
+                onClick={() => setOpen(false)}
+                className="block rounded-lg px-2.5 py-1.5 font-medium text-ink-800 hover:bg-brand-50 hover:text-brand-700"
+              >
+                Application Status Tracker
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function TopbarUserMenu({
+  user,
+  roles,
+  onSignOut,
+}: {
+  user: { full_name: string; email: string; avatar_url?: string | null } | null;
+  roles: Role[];
+  onSignOut: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="flex items-center gap-2 rounded-lg border border-slate-200/80 bg-white py-1 pl-1.5 pr-2.5 text-left transition-colors hover:border-slate-300 hover:bg-slate-50"
+      >
+        <Avatar name={user?.full_name} avatarUrl={user?.avatar_url} size={26} />
+        <span className="hidden max-w-[120px] truncate text-xs font-semibold text-ink-900 md:inline">
+          {user?.full_name?.split(" ")[0] ?? "Account"}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: MOTION_EASE }}
+            role="menu"
+            className="absolute right-0 z-40 mt-2 w-60 rounded-xl border border-slate-200/90 bg-white p-2 shadow-[var(--shadow-popover)]"
+          >
+            <div className="border-b border-slate-100 px-3 py-2">
+              <p className="truncate text-sm font-semibold text-ink-900">{user?.full_name}</p>
+              <p className="truncate text-xs text-slate-500">{user?.email}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {roles.map((r) => (
+                  <span
+                    key={r}
+                    className="rounded-md bg-brand-50 px-1.5 py-0.5 text-[10px] font-semibold text-brand-700"
+                  >
+                    {r}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-1 space-y-0.5">
+              <Link
+                href="/profile"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-ink-800 hover:bg-slate-100"
+              >
+                <User className="h-3.5 w-3.5 text-slate-400" />
+                My profile
+              </Link>
+              <Link
+                href="/sessions"
+                role="menuitem"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-ink-800 hover:bg-slate-100"
+              >
+                <Lock className="h-3.5 w-3.5 text-slate-400" />
+                Active sessions
+              </Link>
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  onSignOut();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const COLLAPSE_KEY = "km.sidebar.collapsed";
 
-/**
- * Sidebar column content: brand block, role-filtered navigation, and a footer
- * with the user chip (menu: sessions / sign out) + collapse toggle. Rendered
- * both in the fixed desktop aside and inside the mobile drawer.
- */
 function SidebarBody({
   sections,
   collapsed,
@@ -319,9 +576,13 @@ function SidebarBody({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-white">
       {/* Brand */}
-      <div className={`flex items-center gap-2.5 border-b border-slate-200/80 px-4 py-4 ${collapsed ? "justify-center px-2" : ""}`}>
+      <div
+        className={`flex items-center gap-2.5 border-b border-slate-200/80 px-4 py-3.5 ${
+          collapsed ? "justify-center px-2" : ""
+        }`}
+      >
         <Link
           href={homeHref}
           onClick={onNavigate}
@@ -333,12 +594,16 @@ function SidebarBody({
             alt=""
             width={36}
             height={36}
-            className="h-9 w-9 shrink-0 rounded-lg bg-white object-contain ring-1 ring-brand-100"
+            className="h-9 w-9 shrink-0 rounded-xl bg-white object-contain shadow-2xs ring-1 ring-brand-200/80"
           />
           {!collapsed && (
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold tracking-tight text-ink-900">KM Media</span>
-              <span className="block truncate text-[11px] text-slate-400">Training Institute</span>
+              <span className="block truncate text-sm font-bold tracking-tight text-ink-900">
+                KM Media
+              </span>
+              <span className="block truncate text-[10px] font-medium tracking-wide text-brand-600">
+                Learn. Create. Lead.
+              </span>
             </span>
           )}
         </Link>
@@ -348,38 +613,63 @@ function SidebarBody({
 
       {/* Footer: user chip + menu + collapse toggle */}
       <div className="relative border-t border-slate-200/80 p-3">
-        {menuOpen && (
-          <div role="menu" className="absolute bottom-full left-3 right-3 z-40 mb-2 rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
-            <p className="px-3 py-1.5 text-xs text-slate-400">{user?.email}</p>
-            <p className="px-3 pb-2 text-xs text-slate-400">{roles.join(" · ")}</p>
-            <Link href="/profile" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-              My profile
-            </Link>
-            <Link href="/sessions" role="menuitem" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-2 text-sm hover:bg-slate-100">
-              Active sessions
-            </Link>
-            <button
-              role="menuitem"
-              onClick={onSignOut}
-              className="block w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: MOTION_EASE }}
+              role="menu"
+              className="absolute bottom-full left-3 right-3 z-40 mb-2 rounded-xl border border-slate-200 bg-white p-2 shadow-[var(--shadow-popover)]"
             >
-              Sign out
-            </button>
-          </div>
-        )}
+              <p className="truncate px-3 py-1 text-xs font-medium text-ink-900">{user?.email}</p>
+              <p className="px-3 pb-2 text-[11px] text-slate-400">{roles.join(" · ")}</p>
+              <Link
+                href="/profile"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-lg px-3 py-2 text-xs font-medium text-ink-800 hover:bg-slate-100"
+              >
+                My profile
+              </Link>
+              <Link
+                href="/sessions"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-lg px-3 py-2 text-xs font-medium text-ink-800 hover:bg-slate-100"
+              >
+                Active sessions
+              </Link>
+              <button
+                role="menuitem"
+                onClick={onSignOut}
+                className="block w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-red-600 hover:bg-red-50"
+              >
+                Sign out
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className={`flex items-center gap-2 ${collapsed ? "flex-col" : ""}`}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
             title={collapsed ? user?.full_name : undefined}
-            className={`flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-slate-100 ${collapsed ? "justify-center px-0" : "flex-1"}`}
+            className={`flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-slate-100 ${
+              collapsed ? "justify-center px-0" : "flex-1"
+            }`}
           >
             <Avatar name={user?.full_name} avatarUrl={user?.avatar_url} size={28} />
             {!collapsed && (
               <span className="min-w-0">
-                <span className="block truncate text-xs font-medium text-slate-800">{user?.full_name}</span>
-                <span className="block truncate text-[11px] text-slate-400">{roles.join(" · ")}</span>
+                <span className="block truncate text-xs font-semibold text-ink-900">
+                  {user?.full_name}
+                </span>
+                <span className="block truncate text-[10px] font-medium text-slate-400">
+                  {roles.join(" · ")}
+                </span>
               </span>
             )}
           </button>
@@ -387,18 +677,14 @@ function SidebarBody({
             <button
               onClick={onToggleCollapse}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="shrink-0 rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+              className="shrink-0 rounded-lg border border-slate-200 p-1.5 text-slate-500 transition-colors hover:bg-slate-50 hover:text-ink-900"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className={`h-3.5 w-3.5 transition-transform ${collapsed ? "rotate-180" : ""}`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
+              <ChevronLeft
+                className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                  collapsed ? "rotate-180" : ""
+                }`}
                 aria-hidden="true"
-              >
-                <path d="m14 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              />
             </button>
           )}
         </div>
@@ -407,15 +693,6 @@ function SidebarBody({
   );
 }
 
-/**
- * Shared shell frame — demo-style layout: full-height vertical navigation
- * sidebar on the left (collapsible to an icon rail, persisted; overlay
- * drawer below `lg`) and a main column filling the rest of the viewport
- * with its own sticky topbar (search + notifications). Used by the role
- * dashboards (DashboardShell) and workspace pages (WorkspaceShell) so the
- * chrome never changes between views. Role-filtered nav; the backend
- * remains authoritative for every action these links lead to.
- */
 function ShellFrame({ pageLabel, children }: { pageLabel: string; children: ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -430,9 +707,6 @@ function ShellFrame({ pageLabel, children }: { pageLabel: string; children: Reac
     ),
   })).filter((s) => s.items.length > 0);
 
-  // Restore the persisted rail width synchronously, before paint, so a shell
-  // remount never flashes the expanded sidebar; the width transition is only
-  // enabled a couple of frames later, so the restore itself never animates.
   useIsomorphicLayoutEffect(() => {
     try {
       setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
@@ -440,6 +714,7 @@ function ShellFrame({ pageLabel, children }: { pageLabel: string; children: Reac
       /* private mode — stay expanded */
     }
   }, []);
+
   useEffect(() => {
     let inner = 0;
     const outer = requestAnimationFrame(() => {
@@ -450,6 +725,7 @@ function ShellFrame({ pageLabel, children }: { pageLabel: string; children: Reac
       cancelAnimationFrame(inner);
     };
   }, []);
+
   const toggleCollapsed = () => {
     setCollapsed((v) => {
       try {
@@ -496,45 +772,74 @@ function ShellFrame({ pageLabel, children }: { pageLabel: string; children: Reac
       </aside>
 
       {/* Sidebar — mobile/tablet drawer */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
-          <div className="absolute inset-0 bg-ink-950/40" onClick={() => setDrawerOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white shadow-xl">
-            <SidebarBody
-              sections={sections}
-              collapsed={false}
-              homeHref={homeHref}
-              user={user}
-              roles={roles}
-              onSignOut={onSignOut}
-              onNavigate={() => setDrawerOpen(false)}
-              showCollapseToggle={false}
-              onToggleCollapse={toggleCollapsed}
+      <AnimatePresence>
+        {drawerOpen && (
+          <div
+            className="fixed inset-0 z-40 lg:hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-ink-950/45 backdrop-blur-[2px]"
+              onClick={() => setDrawerOpen(false)}
             />
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ duration: 0.24, ease: MOTION_EASE }}
+              className="absolute left-0 top-0 h-full w-72 bg-white shadow-2xl"
+            >
+              <button
+                onClick={() => setDrawerOpen(false)}
+                aria-label="Close navigation menu"
+                className="absolute right-3 top-3.5 z-10 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-ink-900"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <SidebarBody
+                sections={sections}
+                collapsed={false}
+                homeHref={homeHref}
+                user={user}
+                roles={roles}
+                onSignOut={onSignOut}
+                onNavigate={() => setDrawerOpen(false)}
+                showCollapseToggle={false}
+                onToggleCollapse={toggleCollapsed}
+              />
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Main column fills the rest of the viewport */}
+      {/* Main column */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-          <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-md supports-[backdrop-filter]:bg-white/80">
+          <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => setDrawerOpen((v) => !v)}
                 aria-expanded={drawerOpen}
                 aria-label="Open navigation menu"
-                className="rounded-lg border border-slate-300 p-2 lg:hidden"
+                className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-50 lg:hidden"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-                </svg>
+                <Menu className="h-4 w-4" aria-hidden="true" />
               </button>
-              <p className="truncate text-sm font-semibold tracking-tight text-ink-900">{pageLabel}</p>
+              <p className="truncate text-sm font-semibold tracking-tight text-ink-900">
+                {pageLabel}
+              </p>
             </div>
-            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-2.5">
               <GlobalSearch />
               <NotificationCenter />
+              <HelpPopover />
+              <TopbarUserMenu user={user} roles={roles} onSignOut={onSignOut} />
             </div>
           </div>
         </header>
@@ -560,64 +865,73 @@ export function DashboardShell({
 
   return (
     <ShellFrame pageLabel={page.title}>
-      <main id="dashboard-main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-        {breadcrumbs && breadcrumbs.length > 0 && (
-          <nav aria-label="Breadcrumb" className="mb-2">
-            <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-500">
-              {breadcrumbs.map((b, i) => (
-                <li key={i} className="flex items-center gap-1">
-                  {b.href ? (
-                    <Link href={b.href} className="hover:text-slate-900 hover:underline">{b.label}</Link>
-                  ) : (
-                    <span aria-current="page" className="text-slate-700">{b.label}</span>
-                  )}
-                  {i < breadcrumbs.length - 1 && <span aria-hidden="true">/</span>}
-                </li>
+      <main id="dashboard-main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+        <PageTransition>
+          {breadcrumbs && breadcrumbs.length > 0 && (
+            <nav aria-label="Breadcrumb" className="mb-2">
+              <ol className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                {breadcrumbs.map((b, i) => (
+                  <li key={i} className="flex items-center gap-1.5">
+                    {b.href ? (
+                      <Link href={b.href} className="transition-colors hover:text-brand-700">
+                        {b.label}
+                      </Link>
+                    ) : (
+                      <span aria-current="page" className="font-medium text-ink-800">
+                        {b.label}
+                      </span>
+                    )}
+                    {i < breadcrumbs.length - 1 && <span aria-hidden="true">/</span>}
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-600">
+                {page.title}
+              </p>
+              <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-ink-900">
+                {greeting ? `Good ${dayPart()}, ${greeting}` : page.title}
+              </h1>
+              {page.description && (
+                <p className="mt-1 text-sm text-slate-500">{page.description}</p>
+              )}
+              {page.meta && <p className="mt-1 text-xs text-slate-400">{page.meta}</p>}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {quickActions?.map((a) => (
+                <Link
+                  key={a.label}
+                  href={a.href}
+                  className="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-semibold text-ink-800 shadow-2xs transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:text-brand-700"
+                >
+                  {a.label}
+                </Link>
               ))}
-            </ol>
-          </nav>
-        )}
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">{page.title}</p>
-            <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-ink-900">
-              {greeting ? `Good ${dayPart()}, ${greeting}` : page.title}
-            </h1>
-            {page.description && <p className="mt-1 text-sm text-slate-500">{page.description}</p>}
-            {page.meta && <p className="mt-0.5 text-xs text-slate-400">{page.meta}</p>}
+              {page.primaryAction}
+            </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {quickActions?.map((a) => (
-              <Link
-                key={a.label}
-                href={a.href}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                {a.label}
-              </Link>
-            ))}
-            {page.primaryAction}
-          </div>
-        </div>
-        {children}
+          {children}
+        </PageTransition>
       </main>
     </ShellFrame>
   );
 }
 
-/** Workspace pages (lists, forms, detail views) — same shell, simpler header. */
+/** Workspace pages (lists, forms, detail views) — same shell, consistent container & page transition. */
 export function WorkspaceShell({ title, children }: { title?: string; children: ReactNode }) {
   const pathname = usePathname();
   return (
     <ShellFrame pageLabel={title ?? workspaceLabel(pathname)}>
-      <main id="dashboard-main" className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
-        {children}
+      <main id="dashboard-main" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        <PageTransition>{children}</PageTransition>
       </main>
     </ShellFrame>
   );
 }
 
-/** "admin/students/" → "Students" — topbar context from the route. */
 function workspaceLabel(pathname: string): string {
   const segs = pathname
     .split("/")

@@ -610,7 +610,7 @@ export function QuestionComposer({
                   </button>
                 )}
                 <button onClick={() => save(false)} disabled={saving}
-                        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+                        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
                   {saving ? "Saving…" : editing ? "Save changes" : "Save question"}
                 </button>
               </div>

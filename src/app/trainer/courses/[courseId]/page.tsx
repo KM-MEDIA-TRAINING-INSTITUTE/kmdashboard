@@ -136,7 +136,7 @@ function CourseBuilderInner() {
                     "Submitted for review — an administrator will take it from here."
                   )
                 }
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 {busy ? "Working…" : submitAction.label}
               </button>
@@ -314,7 +314,7 @@ function CurriculumBuilder({
           <button
             disabled={busy || newModuleTitle.trim().length < 2}
             onClick={addModule}
-            className="shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
             Add module
           </button>
@@ -527,7 +527,7 @@ function AddLessonForm({
         <button
           disabled={busy || title.trim().length < 2}
           onClick={submit}
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+          className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
         >
           Add lesson
         </button>

@@ -94,7 +94,7 @@ function ClassesInner() {
                       href={e.meeting_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-lg bg-slate-900 px-3 py-1 font-medium text-white hover:bg-slate-700"
+                      className="rounded-lg bg-brand-600 px-3 py-1 font-medium text-white hover:bg-brand-700"
                     >
                       Join class
                     </a>

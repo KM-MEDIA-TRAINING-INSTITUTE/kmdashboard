@@ -164,7 +164,7 @@ function AssessmentsInner() {
             </p>
             <p
               className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                remaining === "expired" ? "bg-red-50 text-red-700" : "bg-slate-900 text-white"
+                remaining === "expired" ? "bg-red-50 text-red-700" : "bg-brand-600 text-white"
               }`}
               role="timer"
               aria-live="off"
@@ -213,7 +213,7 @@ function AssessmentsInner() {
           </ol>
           <button
             onClick={submit}
-            className="mt-5 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
             Submit attempt
           </button>
@@ -270,7 +270,7 @@ function AssessmentsInner() {
                     {attemptsLeft > 0 && a.status !== "CLOSED" && !active && (
                       <button
                         onClick={() => start(a)}
-                        className="mt-3 rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+                        className="mt-3 rounded-lg bg-brand-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
                       >
                         {a.my_attempts?.length ? "New attempt" : "Start"}
                       </button>

@@ -225,7 +225,7 @@ function AssignmentsInner() {
                         <button
                           onClick={() => submit(a)}
                           disabled={busy === a.id || (!(answer[a.id] ?? "").trim() && !files[a.id])}
-                          className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                          className="self-start rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                         >
                           {busy === a.id ? "Submitting…" : "Submit"}
                         </button>

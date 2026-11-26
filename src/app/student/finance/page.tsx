@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Banknote, CheckCircle2, CreditCard, FileText, Receipt as ReceiptIcon, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  SectionCard,
+  StatCard,
+  StatusBadge,
+} from "@/components/dashboard/ui";
+import { Button, PageHeader } from "@/components/ui/primitives";
 import { ApiError } from "@/lib/api/client";
 import {
   formatMoney,
@@ -20,11 +30,11 @@ const PURPOSE_LABELS: Record<string, string> = {
   TUITION: "Tuition",
 };
 
-const PAYMENT_STATUS_META: Record<string, { label: string; classes: string }> = {
-  SUCCESS: { label: "Paid", classes: "bg-emerald-100 text-emerald-700" },
-  PENDING: { label: "Pending", classes: "bg-amber-100 text-amber-800" },
-  FAILED: { label: "Failed", classes: "bg-red-100 text-red-700" },
-  REVERSED: { label: "Reversed", classes: "bg-slate-200 text-slate-500" },
+const PAYMENT_STATUS_META: Record<string, { label: string }> = {
+  SUCCESS: { label: "Paid" },
+  PENDING: { label: "Pending" },
+  FAILED: { label: "Failed" },
+  REVERSED: { label: "Reversed" },
 };
 
 function StudentFinanceInner() {
@@ -71,7 +81,10 @@ function StudentFinanceInner() {
     setError(null);
     setNotice(null);
     try {
-      const init = await studentFinanceApi.payInvoice(invoiceId, `${window.location.origin}/student/finance`);
+      const init = await studentFinanceApi.payInvoice(
+        invoiceId,
+        `${window.location.origin}/student/finance`
+      );
       if (init.authorization_url) {
         window.location.href = init.authorization_url;
         return;
@@ -91,79 +104,100 @@ function StudentFinanceInner() {
     <RouteGuard allowedRoles={["STUDENT", "TRAINER", "ADMIN", "SUPERADMIN"]}>
       <AppShell>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-900">My finance</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Tuition balance, invoices, and official receipts.
-            </p>
-          </div>
+          <PageHeader
+            eyebrow="Student Portal"
+            title="My finance"
+            description="Tuition balance, official invoices, Paystack payments, and downloadable receipts."
+            breadcrumbs={[{ label: "Dashboard", href: "/dashboard/student" }, { label: "My finance" }]}
+          />
 
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+          {error && <ErrorState title="Could not load finance data" detail={error} />}
           {notice && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800">
+              {notice}
+            </div>
           )}
 
           {balance && (
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Total billed</p>
-                <p className="mt-1 text-xl font-semibold text-slate-900">{formatMoney(balance.billed_minor)}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Paid</p>
-                <p className="mt-1 text-xl font-semibold text-emerald-700">{formatMoney(balance.paid_minor)}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200 bg-white p-5">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Balance</p>
-                <p className={`mt-1 text-xl font-semibold ${balance.balance_minor > 0 ? "text-amber-700" : "text-emerald-700"}`}>
-                  {formatMoney(balance.balance_minor)}
-                </p>
-              </div>
+              <StatCard
+                label="Total billed"
+                value={formatMoney(balance.billed_minor)}
+                icon={<Wallet className="h-4 w-4" />}
+              />
+              <StatCard
+                label="Paid"
+                value={formatMoney(balance.paid_minor)}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                tone="good"
+              />
+              <StatCard
+                label="Balance"
+                value={formatMoney(balance.balance_minor)}
+                icon={<Banknote className="h-4 w-4" />}
+                tone={balance.balance_minor > 0 ? "warn" : "good"}
+              />
             </div>
           )}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-sm font-semibold text-slate-900">Invoices</h2>
-            {invoices.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">
-                No invoices yet — your tuition invoice appears here after enrollment.
-              </p>
+          <SectionCard
+            title="Invoices"
+            description="Official tuition and fee invoices"
+            icon={<FileText className="h-4 w-4" />}
+          >
+            {loading ? (
+              <LoadingSkeleton rows={3} />
+            ) : invoices.length === 0 ? (
+              <EmptyState
+                icon={<FileText className="h-5 w-5" />}
+                title="No invoices yet"
+                detail="Your tuition invoice appears here after enrolment."
+              />
             ) : (
-              <ul className="mt-3 space-y-3">
+              <ul className="space-y-3">
                 {invoices.map((inv) => (
-                  <li key={inv.id} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                  <li
+                    key={inv.id}
+                    className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-4 transition-colors hover:border-brand-200"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <Link
                           href={`/student/finance/invoice/${inv.id}`}
-                          className="font-mono text-sm font-medium text-blue-700 hover:underline"
+                          className="font-mono text-sm font-bold text-brand-700 hover:underline"
                         >
                           {inv.invoice_number}
                         </Link>
-                        <p className="text-xs text-slate-500">
-                          {formatMoney(inv.amount_paid_minor)} paid of {formatMoney(inv.total_minor)}
+                        <p className="mt-0.5 text-xs text-slate-600">
+                          <span className="font-semibold text-emerald-700">
+                            {formatMoney(inv.amount_paid_minor)}
+                          </span>{" "}
+                          paid of{" "}
+                          <span className="font-semibold text-ink-900">
+                            {formatMoney(inv.total_minor)}
+                          </span>
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${INVOICE_STATUS_META[inv.status].classes}`}>
-                          {INVOICE_STATUS_META[inv.status].label}
-                        </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge
+                          status={inv.status}
+                          label={INVOICE_STATUS_META[inv.status]?.label}
+                        />
                         <Link
                           href={`/student/finance/invoice/${inv.id}`}
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                          className="inline-flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-ink-800 hover:bg-slate-50"
                         >
                           View invoice
                         </Link>
                         {inv.balance_minor > 0 && inv.status !== "CANCELLED" && (
-                          <button
-                            disabled={busyId === inv.id}
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            loading={busyId === inv.id}
                             onClick={() => pay(inv.id)}
-                            className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
                           >
                             {busyId === inv.id ? "Starting…" : "Pay now"}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -171,65 +205,78 @@ function StudentFinanceInner() {
                 ))}
               </ul>
             )}
-          </section>
+          </SectionCard>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-sm font-semibold text-slate-900">Payment history</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Every payment made to the institute from your account, including the application fee.
-            </p>
+          <SectionCard
+            title="Payment history"
+            description="Every payment made to the institute from your account, including the application fee."
+            icon={<CreditCard className="h-4 w-4" />}
+          >
             {payments.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">No payments on record.</p>
+              <EmptyState title="No payments on record" />
             ) : (
-              <ul className="mt-3 space-y-2">
+              <ul className="space-y-2.5">
                 {payments.map((p) => {
-                  const meta = PAYMENT_STATUS_META[p.status] ?? { label: p.status, classes: "bg-slate-100 text-slate-600" };
+                  const meta = PAYMENT_STATUS_META[p.status] ?? { label: p.status };
                   const paidOn = p.verified_at ?? p.created_at;
                   return (
-                    <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                    <li
+                      key={p.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3"
+                    >
                       <div>
-                        <p className="text-sm font-medium text-slate-800">{PURPOSE_LABELS[p.purpose] ?? p.purpose}</p>
+                        <p className="text-sm font-semibold text-ink-900">
+                          {PURPOSE_LABELS[p.purpose] ?? p.purpose}
+                        </p>
                         <p className="font-mono text-xs text-slate-500">{p.reference}</p>
                         {paidOn && (
                           <p className="text-xs text-slate-400">
-                            {new Date(paidOn).toLocaleDateString()} {p.channel ? `· via ${String(p.channel).replace(/_/g, " ")}` : ""}
+                            {new Date(paidOn).toLocaleDateString()}{" "}
+                            {p.channel ? `· via ${String(p.channel).replace(/_/g, " ")}` : ""}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">{formatMoney(p.amount_minor, p.currency)}</span>
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.classes}`}>{meta.label}</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm font-bold tabular-nums text-ink-900">
+                          {formatMoney(p.amount_minor, p.currency)}
+                        </span>
+                        <StatusBadge status={p.status} label={meta.label} />
                       </div>
                     </li>
                   );
                 })}
               </ul>
             )}
-          </section>
+          </SectionCard>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-sm font-semibold text-slate-900">Receipts</h2>
+          <SectionCard title="Receipts" description="Verified payment receipts" icon={<ReceiptIcon className="h-4 w-4" />}>
             {receipts.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-500">No receipts yet.</p>
+              <EmptyState title="No receipts yet" />
             ) : (
-              <ul className="mt-3 space-y-2">
+              <ul className="space-y-2">
                 {receipts.map((r) => (
-                  <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3"
+                  >
                     <Link
                       href={`/student/finance/receipt/${r.id}`}
-                      className="font-mono text-sm text-blue-700 hover:underline"
+                      className="font-mono text-sm font-semibold text-brand-700 hover:underline"
                     >
                       {r.receipt_number}
                     </Link>
-                    <span className="text-sm text-slate-600">{formatMoney(r.amount_minor, r.currency)}</span>
-                    <span className={`text-xs ${r.voided_at ? "text-red-600" : "text-emerald-700"}`}>
-                      {r.voided_at ? "VOID" : "Valid"}
+                    <span className="text-sm font-semibold tabular-nums text-ink-900">
+                      {formatMoney(r.amount_minor, r.currency)}
                     </span>
+                    <StatusBadge
+                      status={r.voided_at ? "CANCELLED" : "ACTIVE"}
+                      label={r.voided_at ? "VOID" : "Valid"}
+                    />
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </SectionCard>
         </div>
       </AppShell>
     </RouteGuard>

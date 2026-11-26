@@ -126,7 +126,7 @@ function TrainerAssignmentsInner() {
         {offeringId && (
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
             {showForm ? "Close" : "New assignment"}
           </button>
@@ -200,7 +200,7 @@ function TrainerAssignmentsInner() {
               <button
                 onClick={create}
                 disabled={!form.title}
-                className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
               >
                 Create draft
               </button>
@@ -317,7 +317,7 @@ function TrainerAssignmentsInner() {
                           <button
                             onClick={() => gradeOne(s)}
                             disabled={grades[s.id]?.score === ""}
-                            className="rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                            className="rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                           >
                             Save grade
                           </button>

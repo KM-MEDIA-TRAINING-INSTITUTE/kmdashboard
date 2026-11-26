@@ -148,7 +148,7 @@ function MyLearningInner() {
                           </div>
                           <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
                             <div
-                              className="h-full rounded-full bg-slate-900"
+                              className="h-full rounded-full bg-brand-600"
                               style={{ width: `${Math.min(100, p.content_progress)}%` }}
                             />
                           </div>

@@ -119,7 +119,7 @@ function AdminAcademicInner() {
             key={t}
             onClick={() => setTab(t)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-              tab === t ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+              tab === t ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50"
             }`}
           >
             {label}
@@ -169,7 +169,7 @@ function AdminAcademicInner() {
                       <button
                         disabled={!selectedTrainer[o.id]}
                         onClick={() => assignTrainer(o)}
-                        className="rounded-lg bg-slate-900 px-2.5 py-1 text-white hover:bg-slate-700 disabled:opacity-40"
+                        className="rounded-lg bg-brand-600 px-2.5 py-1 text-white hover:bg-brand-700 disabled:opacity-40"
                       >
                         Assign
                       </button>

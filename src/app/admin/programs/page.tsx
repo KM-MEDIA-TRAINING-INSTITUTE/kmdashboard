@@ -283,7 +283,7 @@ function ProgramFormDialog({
           <button
             disabled={busy}
             onClick={submit}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {busy ? "Saving…" : editing ? "Save changes" : "Create programme"}
           </button>
@@ -383,7 +383,7 @@ function ProgramsInner() {
                 setEditing(null);
                 setDialog(true);
               }}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
               New programme
             </button>
@@ -439,7 +439,7 @@ function ProgramsInner() {
                           setEditing(p);
                           setDialog(true);
                         }}
-                        className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+                        className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
                       >
                         Edit
                       </button>

@@ -114,7 +114,7 @@ export default function TrackApplicationPage() {
     <main className="grid min-h-dvh place-items-center bg-slate-50 px-6 py-12">
       <div className="w-full max-w-lg">
         <div className="mb-8 text-center">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-slate-900 text-lg font-bold text-white">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-brand-600 text-lg font-bold text-white">
             KM
           </span>
           <h1 className="mt-4 text-xl font-semibold text-slate-900">
@@ -165,7 +165,7 @@ export default function TrackApplicationPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
             {busy ? "Checking…" : "Check status"}
           </button>

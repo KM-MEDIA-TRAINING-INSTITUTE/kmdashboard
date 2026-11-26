@@ -332,7 +332,7 @@ function TrainerAssessmentsInner() {
                 <button
                   onClick={() => transition("publish")}
                   disabled={busy || sortedQuestions.length === 0}
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                  className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                 >
                   Publish
                 </button>
@@ -340,7 +340,7 @@ function TrainerAssessmentsInner() {
             )}
             {paper.status === "PUBLISHED" && (
               <button onClick={() => transition("open")} disabled={busy}
-                      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+                      className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
                 Open for attempts
               </button>
             )}
@@ -398,7 +398,7 @@ function TrainerAssessmentsInner() {
                           {(at.status === "SUBMITTED" || at.status === "AUTO_GRADED") && (
                             <button
                               onClick={() => openReview(at.id)}
-                              className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700"
+                              className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
                             >
                               {review ? "Refresh answers" : "View answers & grade"}
                             </button>
@@ -453,7 +453,7 @@ function TrainerAssessmentsInner() {
                           })}
                           <button
                             onClick={() => submitGrade(at.id)}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+                            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
                           >
                             Submit grade
                           </button>
@@ -506,7 +506,7 @@ function TrainerAssessmentsInner() {
         {offeringId && (
           <button
             onClick={() => setShowForm((s) => !s)}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
           >
             {showForm ? "Close" : "New assessment"}
           </button>
@@ -569,7 +569,7 @@ function TrainerAssessmentsInner() {
                   <input type="number" min={1} value={form.max_attempts} onChange={(e) => setForm({ ...form, max_attempts: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
                 </label>
               </div>
-              <button onClick={create} disabled={!form.title} className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50">
+              <button onClick={create} disabled={!form.title} className="mt-4 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
                 Create draft
               </button>
             </div>

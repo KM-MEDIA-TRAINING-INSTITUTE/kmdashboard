@@ -1,9 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ArrowLeft, GraduationCap, KeyRound, ShieldCheck, User } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import { ErrorState, LoadingSkeleton, SectionCard, StatusBadge } from "@/components/dashboard/ui";
+import { AnimatedModal } from "@/components/ui/motion";
+import { Button, Tabs } from "@/components/ui/primitives";
+import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api/client";
 import {
   academicsApi,
@@ -21,9 +27,9 @@ const REASON_ACTIONS = new Set(["SUSPENDED", "DEFERRED", "WITHDRAWN", "EXPELLED"
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-slate-400">{label}</dt>
-      <dd className="mt-0.5 text-slate-700">{value || "—"}</dd>
+    <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
+      <dd className="mt-1 text-sm font-medium text-ink-900">{value || "—"}</dd>
     </div>
   );
 }
@@ -31,30 +37,28 @@ function Field({ label, value }: { label: string; value: string | null | undefin
 export default function StudentDetailPage() {
   const params = useParams<{ studentId: string }>();
   const studentId = params.studentId;
+  const toast = useToast();
 
+  const [tab, setTab] = useState<"overview" | "enrollments" | "access">("overview");
   const [student, setStudent] = useState<StudentDetail | null>(null);
   const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Enrollment action state
   const [dialogAction, setDialogAction] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [activeEnrollmentId, setActiveEnrollmentId] = useState<string | null>(null);
 
-  // Enroll-from-admission dialog state
   const [enrollDialog, setEnrollDialog] = useState(false);
   const [intakes, setIntakes] = useState<IntakeRow[]>([]);
   const [campuses, setCampuses] = useState<CampusRow[]>([]);
   const [enrollIntakeId, setEnrollIntakeId] = useState("");
   const [enrollCampusId, setEnrollCampusId] = useState("");
 
-  // Credential handoff state
   const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null);
   const [credBusy, setCredBusy] = useState(false);
 
-  // Tuition invoicing state
   const [tuitionBusyId, setTuitionBusyId] = useState<string | null>(null);
   const [tuitionNotice, setTuitionNotice] = useState<string | null>(null);
 
@@ -88,6 +92,7 @@ export default function StudentDetailPage() {
       await studentsApi.changeStatus(studentId, status, reason.trim() || undefined);
       setDialogAction(null);
       setReason("");
+      toast.success("Student status updated", `Status set to ${status}`);
       await load();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Action failed");
@@ -116,6 +121,7 @@ export default function StudentDetailPage() {
       }
       setDialogAction(null);
       setReason("");
+      toast.success("Enrolment updated");
       await load();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Action failed");
@@ -130,9 +136,9 @@ export default function StudentDetailPage() {
     setTuitionNotice(null);
     try {
       const inv = await financeApi.issueTuition(enrollmentId);
-      setTuitionNotice(
-        `Tuition invoice ${inv.invoice_number} issued — ${formatMoney(inv.total_minor, inv.currency)}. The student now sees it under My finance.`
-      );
+      const msg = `Tuition invoice ${inv.invoice_number} issued — ${formatMoney(inv.total_minor, inv.currency)}. The student now sees it under My finance.`;
+      setTuitionNotice(msg);
+      toast.success("Tuition invoice issued", inv.invoice_number);
       await load();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Could not issue tuition invoice");
@@ -151,7 +157,7 @@ export default function StudentDetailPage() {
       setEnrollCampusId("");
       setEnrollDialog(true);
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.message : "Failed to load intakes" as string);
+      setActionError(err instanceof ApiError ? err.message : ("Failed to load intakes" as string));
     }
   };
 
@@ -168,9 +174,9 @@ export default function StudentDetailPage() {
         intake_id: enrollIntakeId,
         campus_id: enrollCampusId || undefined,
       });
-      // Activate immediately so the student can see their programme.
       await enrollmentsApi.confirm(created.id);
       setEnrollDialog(false);
+      toast.success("Student enrolled and activated");
       await load();
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Enrollment failed");
@@ -189,6 +195,7 @@ export default function StudentDetailPage() {
     try {
       const res = await studentsApi.resetCredentials(student.user_id);
       setCredentials({ email: student.email ?? "", password: res.temporary_password });
+      toast.success("Temporary credentials issued");
     } catch (err) {
       setActionError(err instanceof ApiError ? err.message : "Could not issue credentials");
     } finally {
@@ -200,9 +207,7 @@ export default function StudentDetailPage() {
     return (
       <RouteGuard allowedRoles={["ADMIN", "SUPERADMIN"]}>
         <AppShell>
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
+          <ErrorState title="Could not load student" detail={error} onRetry={load} />
         </AppShell>
       </RouteGuard>
     );
@@ -212,7 +217,7 @@ export default function StudentDetailPage() {
     return (
       <RouteGuard allowedRoles={["ADMIN", "SUPERADMIN"]}>
         <AppShell>
-          <p className="text-sm text-slate-400">Loading student…</p>
+          <LoadingSkeleton rows={5} />
         </AppShell>
       </RouteGuard>
     );
@@ -233,16 +238,22 @@ export default function StudentDetailPage() {
     <RouteGuard allowedRoles={["ADMIN", "SUPERADMIN"]}>
       <AppShell>
         <div className="space-y-6">
-          <a href="/admin/students" className="text-sm text-slate-500 hover:text-slate-900">
-            ← All students
-          </a>
+          <Link
+            href="/admin/students"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-brand-700"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+            All students
+          </Link>
 
           {/* Profile header */}
-          <div className="rounded-xl border border-slate-200 bg-white p-6">
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="font-mono text-xs text-slate-500">{student.index_number}</p>
-                <h1 className="mt-1 text-xl font-semibold text-slate-900">
+                <p className="font-mono text-xs font-semibold text-brand-600">
+                  {student.index_number}
+                </p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-ink-900">
                   {student.full_name ?? "Unnamed student"}
                 </h1>
                 <p className="mt-0.5 text-sm text-slate-500">
@@ -250,331 +261,359 @@ export default function StudentDetailPage() {
                 </p>
               </div>
               <div className="text-right">
-                <span className="inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">
-                  {student.status}
-                </span>
+                <StatusBadge status={student.status} />
                 {!student.account_active && (
-                  <p className="mt-1 text-xs text-red-600">Account deactivated</p>
+                  <p className="mt-1.5 text-xs font-medium text-red-600">Account deactivated</p>
                 )}
               </div>
             </div>
 
-            <dl className="mt-6 grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
-              <Field label="Email" value={student.email} />
-              <Field label="Phone" value={student.phone} />
-              <Field label="Admission no." value={student.admission_number} />
-              <Field label="Student ID" value={student.student_id} />
-              <Field label="Date of birth" value={student.date_of_birth} />
-              <Field label="Nationality" value={student.nationality} />
-              <Field label="Address" value={student.residential_address} />
-              <Field label="City / Region" value={[student.city, student.region].filter(Boolean).join(", ")} />
-              <Field label="Emergency contact" value={
-                student.emergency_contact_name
-                  ? `${student.emergency_contact_name}${student.emergency_contact_phone ? ` · ${student.emergency_contact_phone}` : ""}`
-                  : null
-              } />
-            </dl>
-          </div>
-
-          {/* Account access / credentials */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">LMS account access</h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {student.email ?? "No email"} ·{" "}
-                  {student.account_active ? "account active" : "account deactivated"}
-                </p>
-              </div>
-              <button
-                disabled={credBusy || !student.user_id}
-                onClick={issueCredentials}
-                className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-              >
-                {credBusy ? "Working…" : "Reset & send login credentials"}
-              </button>
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <Tabs
+                layoutId="student-detail-tabs"
+                active={tab}
+                onChange={setTab}
+                tabs={[
+                  { id: "overview", label: "Overview & Personal Info", icon: <User className="h-3.5 w-3.5" /> },
+                  {
+                    id: "enrollments",
+                    label: "Academic & Enrolments",
+                    count: enrollments.length,
+                    icon: <GraduationCap className="h-3.5 w-3.5" />,
+                  },
+                  { id: "access", label: "Account & Status", icon: <ShieldCheck className="h-3.5 w-3.5" /> },
+                ]}
+              />
             </div>
-            {credentials && (
-              <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm">
-                <p className="font-medium text-emerald-800">
-                  Temporary credentials — share these with the student now
-                </p>
-                <p className="mt-2 text-emerald-900">
-                  <span className="font-medium">Email:</span>{" "}
-                  {credentials.email || student.email || "—"}
-                </p>
-                <p className="text-emerald-900">
-                  <span className="font-medium">Temporary password:</span>{" "}
-                  <code className="rounded bg-white px-1.5 py-0.5 font-mono">
-                    {credentials.password}
-                  </code>
-                </p>
-                <p className="mt-2 text-xs text-emerald-700">
-                  Credentials have also been sent to the student via email. The student must change their password on first login.
-                </p>
-                <button
-                  onClick={() => setCredentials(null)}
-                  className="mt-3 rounded-lg border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
           </div>
 
-          {/* Status actions */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Student status</h2>
+          {tab === "overview" && (
+            <SectionCard title="Personal & Admission Details" description="Canonical student record">
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Field label="Email" value={student.email} />
+                <Field label="Phone" value={student.phone} />
+                <Field label="Admission no." value={student.admission_number} />
+                <Field label="Student ID" value={student.student_id} />
+                <Field label="Date of birth" value={student.date_of_birth} />
+                <Field label="Nationality" value={student.nationality} />
+                <Field label="Address" value={student.residential_address} />
+                <Field
+                  label="City / Region"
+                  value={[student.city, student.region].filter(Boolean).join(", ")}
+                />
+                <Field
+                  label="Emergency contact"
+                  value={
+                    student.emergency_contact_name
+                      ? `${student.emergency_contact_name}${
+                          student.emergency_contact_phone ? ` · ${student.emergency_contact_phone}` : ""
+                        }`
+                      : null
+                  }
+                />
+              </dl>
+            </SectionCard>
+          )}
+
+          {tab === "enrollments" && (
+            <SectionCard
+              title="Enrolments"
+              description="Programme enrolments, status transitions, and tuition invoicing"
+              icon={<GraduationCap className="h-4 w-4" />}
+            >
+              {enrollments.length === 0 ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 py-2">
+                  <p className="text-sm text-slate-500">
+                    No enrolment yet. Enrol the student to give them access to their programme.
+                  </p>
+                  {(student.status === "ADMITTED" || student.status === "ENROLLED") && (
+                    <Button variant="primary" disabled={busy} onClick={openEnroll}>
+                      Enroll student
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {enrollments.map((e) => (
+                    <div
+                      key={e.id}
+                      className="rounded-xl border border-slate-200/80 bg-slate-50/40 p-4"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-mono text-xs text-slate-500">{e.enrollment_number}</p>
+                          <p className="text-sm font-semibold text-ink-900">
+                            {e.program_title} · {e.intake_name}
+                            {e.session_name ? ` (${e.session_name})` : ""}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                            <span>{e.campus_name ?? "No campus"}</span>
+                            <StatusBadge status={e.status} />
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {e.status === "PENDING" && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              disabled={busy}
+                              onClick={() => runEnrollmentAction(e.id, "CONFIRM")}
+                            >
+                              Confirm &amp; activate
+                            </Button>
+                          )}
+                          {e.status === "ACTIVE" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="primary"
+                                loading={tuitionBusyId === e.id}
+                                disabled={busy}
+                                onClick={() => issueTuitionFor(e.id)}
+                              >
+                                {tuitionBusyId === e.id ? "Issuing…" : "Issue tuition invoice"}
+                              </Button>
+                              {["SUSPENDED", "DEFERRED", "COMPLETED", "WITHDRAWN"].map((action) => (
+                                <Button
+                                  key={action}
+                                  size="sm"
+                                  variant={action === "WITHDRAWN" ? "danger" : "outline"}
+                                  disabled={busy}
+                                  onClick={() => {
+                                    setActiveEnrollmentId(e.id);
+                                    setDialogAction(`enrollment:${action}`);
+                                    setReason("");
+                                    setActionError(null);
+                                  }}
+                                >
+                                  {action.charAt(0) + action.slice(1).toLowerCase()}
+                                </Button>
+                              ))}
+                            </>
+                          )}
+                          {(e.status === "SUSPENDED" || e.status === "DEFERRED") && (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              disabled={busy}
+                              onClick={() => runEnrollmentAction(e.id, "ACTIVE")}
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {tuitionNotice && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800">
+                      {tuitionNotice}
+                    </div>
+                  )}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {tab === "access" && (
+            <div className="space-y-6">
+              <SectionCard
+                title="LMS Account Access"
+                description={`${student.email ?? "No email"} · ${
+                  student.account_active ? "account active" : "account deactivated"
+                }`}
+                icon={<KeyRound className="h-4 w-4" />}
+                action={
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={credBusy}
+                    disabled={!student.user_id}
+                    onClick={issueCredentials}
+                  >
+                    Reset &amp; send login credentials
+                  </Button>
+                }
+              >
+                {credentials ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
+                    <p className="font-semibold text-emerald-900">
+                      Temporary credentials — share these with the student now
+                    </p>
+                    <p className="mt-2 text-emerald-900">
+                      <span className="font-medium">Email:</span>{" "}
+                      {credentials.email || student.email || "—"}
+                    </p>
+                    <p className="text-emerald-900">
+                      <span className="font-medium">Temporary password:</span>{" "}
+                      <code className="rounded bg-white px-2 py-0.5 font-mono font-semibold">
+                        {credentials.password}
+                      </code>
+                    </p>
+                    <p className="mt-2 text-xs text-emerald-700">
+                      Credentials have also been sent via email. The student must change their password on first login.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => setCredentials(null)}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    Use the button above to issue a fresh temporary password and email it to the student.
+                  </p>
+                )}
+              </SectionCard>
+
+              <SectionCard
+                title="Student Lifecycle Status"
+                description="Transition the student's academic standing (recorded in the audit trail)"
+              >
+                {actionError && (
+                  <p className="mb-3 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs font-medium text-red-700">
+                    {actionError}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {nextStudentStatuses.length === 0 && (
+                    <p className="text-sm text-slate-400">No further transitions from {student.status}.</p>
+                  )}
+                  {nextStudentStatuses.map((s) => (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant={
+                        s === "ACTIVE" || s === "GRADUATED"
+                          ? "primary"
+                          : s === "SUSPENDED" || s === "DEFERRED"
+                            ? "outline"
+                            : "danger"
+                      }
+                      disabled={busy}
+                      onClick={() => {
+                        setDialogAction(`student:${s}`);
+                        setReason("");
+                        setActionError(null);
+                      }}
+                    >
+                      {s === "ACTIVE" ? "Reactivate" : `Set ${s}`}
+                    </Button>
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* Enroll-from-admission dialog */}
+          <AnimatedModal open={enrollDialog} onClose={() => setEnrollDialog(false)} maxWidth="max-w-md">
+            <h3 className="text-base font-bold text-ink-900">Enroll student</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              {student.full_name} · {student.index_number}
+            </p>
+
+            <label htmlFor="enroll-intake" className="mt-4 block text-xs font-semibold text-ink-800">
+              Intake
+            </label>
+            {intakes.length === 0 ? (
+              <p className="mt-1 text-xs text-amber-700">
+                No OPEN/ACTIVE intake exists. Create one under Academics → Intakes first.
+              </p>
+            ) : (
+              <select
+                id="enroll-intake"
+                value={enrollIntakeId}
+                onChange={(e) => setEnrollIntakeId(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              >
+                <option value="">Select an intake…</option>
+                {intakes.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.name} ({i.status}){i.session_name ? ` · ${i.session_name}` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <label htmlFor="enroll-campus" className="mt-4 block text-xs font-semibold text-ink-800">
+              Campus <span className="text-slate-400">(optional)</span>
+            </label>
+            <select
+              id="enroll-campus"
+              value={enrollCampusId}
+              onChange={(e) => setEnrollCampusId(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            >
+              <option value="">No campus</option>
+              {campuses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+
             {actionError && (
-              <p className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+              <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
                 {actionError}
               </p>
             )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              {nextStudentStatuses.length === 0 && (
-                <p className="text-sm text-slate-400">No further transitions from {student.status}.</p>
-              )}
-              {nextStudentStatuses.map((s) => (
-                <button
-                  key={s}
-                  disabled={busy}
-                  onClick={() => {
-                    setDialogAction(`student:${s}`);
-                    setReason("");
-                    setActionError(null);
-                  }}
-                  className={`rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-50 ${
-                    s === "ACTIVE" || s === "GRADUATED"
-                      ? "bg-emerald-600 text-white hover:bg-emerald-700"
-                      : s === "SUSPENDED" || s === "DEFERRED"
-                        ? "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                        : "bg-red-600 text-white hover:bg-red-700"
-                  }`}
-                >
-                  {s === "ACTIVE" ? "Reactivate" : `Set ${s}`}
-                </button>
-              ))}
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEnrollDialog(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" loading={busy} disabled={!enrollIntakeId} onClick={submitEnroll}>
+                Enroll &amp; activate
+              </Button>
             </div>
-          </div>
-
-          {/* Enrollments */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-semibold text-slate-900">Enrollments</h2>
-            {enrollments.length === 0 ? (
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-slate-400">
-                  No enrollment yet. Enroll the student to give them access to
-                  their programme.
-                </p>
-                {(student.status === "ADMITTED" || student.status === "ENROLLED") && (
-                  <button
-                    disabled={busy}
-                    onClick={openEnroll}
-                    className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    Enroll student
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="mt-3 space-y-3">
-                {enrollments.map((e) => (
-                  <div key={e.id} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="font-mono text-xs text-slate-500">{e.enrollment_number}</p>
-                        <p className="text-sm font-medium text-slate-900">
-                          {e.program_title} · {e.intake_name}
-                          {e.session_name ? ` (${e.session_name})` : ""}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {e.campus_name ?? "No campus"} · status {e.status}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {e.status === "PENDING" && (
-                          <button
-                            disabled={busy}
-                            onClick={() => runEnrollmentAction(e.id, "CONFIRM")}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            Confirm &amp; activate
-                          </button>
-                        )}
-                        {e.status === "ACTIVE" && (
-                          <>
-                            <button
-                              disabled={busy || tuitionBusyId === e.id}
-                              onClick={() => issueTuitionFor(e.id)}
-                              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-                            >
-                              {tuitionBusyId === e.id ? "Issuing…" : "Issue tuition invoice"}
-                            </button>
-                            {["SUSPENDED", "DEFERRED", "COMPLETED", "WITHDRAWN"].map((action) => (
-                              <button
-                                key={action}
-                                disabled={busy}
-                                onClick={() => {
-                                  setActiveEnrollmentId(e.id);
-                                  setDialogAction(`enrollment:${action}`);
-                                  setReason("");
-                                  setActionError(null);
-                                }}
-                                className={`rounded-lg px-3 py-1.5 text-sm font-medium disabled:opacity-50 ${
-                                  action === "COMPLETED"
-                                    ? "bg-teal-600 text-white hover:bg-teal-700"
-                                    : action === "WITHDRAWN"
-                                      ? "bg-red-600 text-white hover:bg-red-700"
-                                      : "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
-                                }`}
-                              >
-                                {action.charAt(0) + action.slice(1).toLowerCase()}
-                              </button>
-                            ))}
-                          </>
-                        )}
-                        {(e.status === "SUSPENDED" || e.status === "DEFERRED") && (
-                          <button
-                            disabled={busy}
-                            onClick={() => runEnrollmentAction(e.id, "ACTIVE")}
-                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            Reactivate
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {tuitionNotice && (
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{tuitionNotice}</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Enroll-from-admission dialog */}
-          {enrollDialog && (
-            <div className="fixed inset-0 z-40 grid place-items-center bg-black/30 px-4">
-              <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                <h3 className="text-base font-semibold text-slate-900">Enroll student</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {student.full_name} · {student.index_number}
-                </p>
-
-                <label htmlFor="enroll-intake" className="mt-4 block text-sm font-medium text-slate-700">
-                  Intake
-                </label>
-                {intakes.length === 0 ? (
-                  <p className="mt-1 text-sm text-amber-700">
-                    No OPEN/ACTIVE intake exists. Create one under Academics →
-                    Intakes first.
-                  </p>
-                ) : (
-                  <select
-                    id="enroll-intake"
-                    value={enrollIntakeId}
-                    onChange={(e) => setEnrollIntakeId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                  >
-                    <option value="">Select an intake…</option>
-                    {intakes.map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.name} ({i.status}){i.session_name ? ` · ${i.session_name}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                <label htmlFor="enroll-campus" className="mt-4 block text-sm font-medium text-slate-700">
-                  Campus <span className="text-slate-400">(optional)</span>
-                </label>
-                <select
-                  id="enroll-campus"
-                  value={enrollCampusId}
-                  onChange={(e) => setEnrollCampusId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                >
-                  <option value="">No campus</option>
-                  {campuses.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-
-                {actionError && (
-                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
-                    {actionError}
-                  </p>
-                )}
-                <div className="mt-4 flex justify-end gap-2">
-                  <button
-                    onClick={() => setEnrollDialog(false)}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={busy || !enrollIntakeId}
-                    onClick={submitEnroll}
-                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {busy ? "Working…" : "Enroll & activate"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          </AnimatedModal>
 
           {/* Reason / confirm dialog */}
-          {dialogAction && (
-            <div className="fixed inset-0 z-40 grid place-items-center bg-black/30 px-4">
-              <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                <h3 className="text-base font-semibold text-slate-900">
-                  Confirm {dialogAction.split(":")[1].toLowerCase()} action
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {dialogAction.startsWith("enrollment") && activeEnrollmentId
-                    ? "This changes the enrollment and the student's academic status."
-                    : "This changes the student's academic status."}
-                </p>
-                <label htmlFor="action-reason" className="mt-4 block text-sm font-medium text-slate-700">
-                  Reason
-                </label>
-                <textarea
-                  id="action-reason"
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
-                  placeholder="Recorded in the audit trail"
-                />
-                {actionError && (
-                  <p className="mt-2 rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
-                    {actionError}
-                  </p>
-                )}
-                <div className="mt-4 flex justify-end gap-2">
-                  <button
-                    onClick={() => setDialogAction(null)}
-                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      const [kind, action] = dialogAction.split(":");
-                      if (kind === "student") runStudentStatus(action as StudentStatusValue);
-                      else if (activeEnrollmentId) runEnrollmentAction(activeEnrollmentId, action);
-                    }}
-                    className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-                  >
-                    {busy ? "Working…" : "Confirm"}
-                  </button>
-                </div>
-              </div>
+          <AnimatedModal open={Boolean(dialogAction)} onClose={() => setDialogAction(null)} maxWidth="max-w-md">
+            <h3 className="text-base font-bold text-ink-900">
+              Confirm {dialogAction?.split(":")[1].toLowerCase()} action
+            </h3>
+            <p className="mt-1 text-xs text-slate-500">
+              {dialogAction?.startsWith("enrollment") && activeEnrollmentId
+                ? "This changes the enrolment and the student's academic status."
+                : "This changes the student's academic status."}
+            </p>
+            <label htmlFor="action-reason" className="mt-4 block text-xs font-semibold text-ink-800">
+              Reason
+            </label>
+            <textarea
+              id="action-reason"
+              rows={3}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+              placeholder="Recorded in the audit trail"
+            />
+            {actionError && (
+              <p className="mt-2 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+                {actionError}
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setDialogAction(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="secondary"
+                loading={busy}
+                onClick={() => {
+                  if (!dialogAction) return;
+                  const [kind, action] = dialogAction.split(":");
+                  if (kind === "student") runStudentStatus(action as StudentStatusValue);
+                  else if (activeEnrollmentId) runEnrollmentAction(activeEnrollmentId, action);
+                }}
+              >
+                Confirm
+              </Button>
             </div>
-          )}
+          </AnimatedModal>
         </div>
       </AppShell>
     </RouteGuard>

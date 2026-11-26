@@ -263,7 +263,7 @@ function GradebookInner() {
                   <button
                     onClick={saveComponents}
                     disabled={totalWeight !== 100 || rows.length === 0}
-                    className="rounded-lg bg-slate-900 px-4 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                    className="rounded-lg bg-brand-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                   >
                     Save components
                   </button>
@@ -292,7 +292,7 @@ function GradebookInner() {
               {book.state === "FINALIZED" && (
                 <button
                   onClick={publish}
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
                 >
                   Publish results
                 </button>

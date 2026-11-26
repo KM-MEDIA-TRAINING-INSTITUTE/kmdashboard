@@ -1,8 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Award, BookOpen, Calendar, GraduationCap, Layers, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import {
+  EmptyState,
+  LoadingSkeleton,
+  SectionCard,
+  StatCard,
+  StatusBadge,
+} from "@/components/dashboard/ui";
+import { PageHeader } from "@/components/ui/primitives";
 import { ApiError } from "@/lib/api/client";
 import { studentsApi, type MyProgram } from "@/lib/api/admissions";
 import { myEnrollmentsApi, type EnrollmentRow } from "@/lib/api/students";
@@ -35,7 +45,6 @@ function StudentInner() {
       try {
         const me = await studentsApi.myProgram();
         if (!cancelled) setData(me);
-        // Enrollment records (Phase 4) — empty until the institute enrolls the student.
         try {
           const enr = await myEnrollmentsApi.list();
           if (!cancelled) setEnrollments(enr);
@@ -62,18 +71,19 @@ function StudentInner() {
   }, []);
 
   if (loading) {
-    return <p className="text-sm text-slate-400">Loading your programme…</p>;
+    return (
+      <div className="space-y-6">
+        <PageHeader eyebrow="Student Portal" title="My programme" />
+        <LoadingSkeleton rows={4} />
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">My programme</h1>
-        </div>
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">
-          {error}
-        </div>
+        <PageHeader eyebrow="Student Portal" title="My programme" />
+        <EmptyState icon={<GraduationCap className="h-5 w-5" />} title="No programme linked" detail={error} />
       </div>
     );
   }
@@ -85,63 +95,53 @@ function StudentInner() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-lg font-semibold text-slate-900">My programme</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Your admission record and programme details.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Student Portal"
+        title="My programme"
+        description="Your admission record, programme curriculum, and enrolment details."
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard/student" }, { label: "My programme" }]}
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Index number</p>
-          <p className="mt-1 font-mono text-sm font-semibold text-slate-900">
-            {data!.index_number}
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Admission number</p>
-          <p className="mt-1 font-mono text-sm font-semibold text-slate-900">
-            {data!.admission_number}
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <p className="text-xs uppercase tracking-wide text-slate-400">Status</p>
-          <p className="mt-1 text-sm font-semibold text-emerald-700">
-            {data!.admission_status} · {data!.enrollment_status.replace("_", " ")}
-          </p>
-        </div>
+        <StatCard label="Index number" value={data!.index_number} tone="brand" />
+        <StatCard label="Admission number" value={data!.admission_number} />
+        <StatCard
+          label="Status"
+          value={`${data!.admission_status} · ${data!.enrollment_status.replace("_", " ")}`}
+          tone="good"
+        />
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">{program.title}</h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {program.category} · {program.certificate ?? "Certificate"}
-              {program.duration_weeks ? ` · ${program.duration_weeks} weeks` : ""}
-              {` · Level ${data!.current_level}`}
-            </p>
-          </div>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+      <SectionCard
+        title={program.title}
+        description={`${program.category} · ${program.certificate ?? "Certificate"}${
+          program.duration_weeks ? ` · ${program.duration_weeks} weeks` : ""
+        } · Level ${data!.current_level}`}
+        icon={<GraduationCap className="h-4 w-4" />}
+        action={
+          <span className="rounded-md bg-brand-50 px-2.5 py-1 font-mono text-xs font-bold text-brand-700 ring-1 ring-brand-600/15">
             {program.code}
           </span>
-        </div>
-
-        <p className="mt-4 text-sm leading-relaxed text-slate-600">
+        }
+      >
+        <p className="text-sm leading-relaxed text-slate-600">
           {program.long_description || program.description}
         </p>
 
         <dl className="mt-6 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Tuition</dt>
-            <dd className="mt-0.5 text-slate-700">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Tuition
+            </dt>
+            <dd className="mt-1 font-semibold text-ink-900">
               {program.tuition_minor != null ? CURRENCY.format(program.tuition_minor / 100) : "—"}
             </dd>
           </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-slate-400">Admitted on</dt>
-            <dd className="mt-0.5 text-slate-700">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Admitted on
+            </dt>
+            <dd className="mt-1 font-semibold text-ink-900">
               {new Date(data!.admitted_at).toLocaleDateString("en-GB", {
                 day: "numeric",
                 month: "long",
@@ -153,7 +153,7 @@ function StudentInner() {
 
         {requirements.length > 0 && (
           <section className="mt-6">
-            <h3 className="text-sm font-semibold text-slate-900">Entry requirements</h3>
+            <h3 className="text-sm font-semibold text-ink-900">Entry requirements</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
               {requirements.map((r) => (
                 <li key={r}>{r}</li>
@@ -164,7 +164,7 @@ function StudentInner() {
 
         {modules.length > 0 && (
           <section className="mt-6">
-            <h3 className="text-sm font-semibold text-slate-900">Course structure</h3>
+            <h3 className="text-sm font-semibold text-ink-900">Course structure</h3>
             <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
               {modules.map((m) => (
                 <li key={m}>{m}</li>
@@ -175,7 +175,7 @@ function StudentInner() {
 
         {opportunities.length > 0 && (
           <section className="mt-6">
-            <h3 className="text-sm font-semibold text-slate-900">Career opportunities</h3>
+            <h3 className="text-sm font-semibold text-ink-900">Career opportunities</h3>
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-600">
               {opportunities.map((o) => (
                 <li key={o}>{o}</li>
@@ -183,106 +183,94 @@ function StudentInner() {
             </ul>
           </section>
         )}
-      </div>
+      </SectionCard>
 
-      {/* Phase 4: enrollment status (real data, empty state until enrolled) */}
-      <section className="rounded-xl border border-slate-200 bg-white p-6">
-        <h3 className="text-sm font-semibold text-slate-900">My enrollment</h3>
+      <SectionCard
+        title="My enrollment"
+        description="Official enrolment records from the admissions office"
+        icon={<Layers className="h-4 w-4" />}
+      >
         {enrollments.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-500">
-            You are not enrolled yet. Your enrollment will appear here once the
-            admissions office confirms it.
+          <p className="text-sm text-slate-500">
+            You are not enrolled yet. Your enrolment will appear here once the admissions office confirms it.
           </p>
         ) : (
-          <ul className="mt-3 space-y-3">
+          <ul className="space-y-3">
             {enrollments.map((e) => (
-              <li key={e.id} className="rounded-lg border border-slate-200 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{e.program_title}</p>
-                    <p className="text-xs text-slate-500">
-                      {e.enrollment_number} · {e.intake_name}
-                      {e.session_name ? ` · ${e.session_name}` : ""}
-                      {e.campus_name ? ` · ${e.campus_name}` : ""}
-                    </p>
-                  </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      e.status === "ACTIVE"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : e.status === "PENDING"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {e.status}
-                  </span>
+              <li
+                key={e.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200/80 bg-slate-50/40 p-4"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-ink-900">{e.program_title}</p>
+                  <p className="text-xs text-slate-500">
+                    {e.enrollment_number} · {e.intake_name}
+                    {e.session_name ? ` · ${e.session_name}` : ""}
+                    {e.campus_name ? ` · ${e.campus_name}` : ""}
+                  </p>
                 </div>
+                <StatusBadge status={e.status} />
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </SectionCard>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <a
-          href="/student/courses"
-          className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
-        >
-          <h2 className="text-sm font-semibold text-slate-900">My courses</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Published course materials for your programme — lessons, resources,
-            and your completion progress.
-          </p>
-          <p className="mt-3 text-xs font-medium text-slate-900">Open my courses →</p>
-        </a>
-        <a
-          href="/student/my-learning"
-          className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
-        >
-          <h2 className="text-sm font-semibold text-slate-900">My learning</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Live academic dashboard — courses, classes, attendance, results,
-            and completion progress.
-          </p>
-          <p className="mt-3 text-xs font-medium text-slate-900">Open my learning →</p>
-        </a>
-        <a
-          href="/student/finance"
-          className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
-        >
-          <h2 className="text-sm font-semibold text-slate-900">My finance</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Tuition balance, invoices, installment status, and official
-            receipts — pay online via Paystack.
-          </p>
-          <p className="mt-3 text-xs font-medium text-slate-900">Open my finance →</p>
-        </a>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <a
-          href="/student/calendar"
-          className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
-        >
-          <h2 className="text-sm font-semibold text-slate-900">Calendar &amp; classes</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Class schedule, assignment deadlines, and assessment windows in one
-            agenda view.
-          </p>
-          <p className="mt-3 text-xs font-medium text-slate-900">Open calendar →</p>
-        </a>
-        <a
-          href="/student/results"
-          className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-slate-400 hover:shadow-sm"
-        >
-          <h2 className="text-sm font-semibold text-slate-900">Results</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Released results with letter grades — provisional where enabled by
-            policy.
-          </p>
-          <p className="mt-3 text-xs font-medium text-slate-900">Open results →</p>
-        </a>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          {
+            href: "/student/courses",
+            title: "My courses",
+            desc: "Published course materials for your programme — lessons, resources, and completion progress.",
+            cta: "Open my courses →",
+            icon: <Layers className="h-4 w-4" />,
+          },
+          {
+            href: "/student/my-learning",
+            title: "My learning",
+            desc: "Live academic workspace — courses, classes, attendance, results, and completion progress.",
+            cta: "Open my learning →",
+            icon: <BookOpen className="h-4 w-4" />,
+          },
+          {
+            href: "/student/finance",
+            title: "My finance",
+            desc: "Tuition balance, invoices, installment status, and official receipts — pay online via Paystack.",
+            cta: "Open my finance →",
+            icon: <Wallet className="h-4 w-4" />,
+          },
+          {
+            href: "/student/calendar",
+            title: "Calendar & classes",
+            desc: "Class schedule, assignment deadlines, and assessment windows in one agenda view.",
+            cta: "Open calendar →",
+            icon: <Calendar className="h-4 w-4" />,
+          },
+          {
+            href: "/student/results",
+            title: "Results",
+            desc: "Released results with letter grades — provisional where enabled by policy.",
+            cta: "Open results →",
+            icon: <Award className="h-4 w-4" />,
+          },
+        ].map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className="group rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)] transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-[var(--shadow-card-hover)]"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                {card.icon}
+              </span>
+              <h2 className="text-sm font-semibold text-ink-900 group-hover:text-brand-700 transition-colors">
+                {card.title}
+              </h2>
+            </div>
+            <p className="mt-2.5 text-xs leading-relaxed text-slate-500">{card.desc}</p>
+            <p className="mt-3 text-xs font-semibold text-brand-600">{card.cta}</p>
+          </Link>
+        ))}
       </div>
     </div>
   );

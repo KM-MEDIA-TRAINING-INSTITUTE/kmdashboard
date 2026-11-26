@@ -280,7 +280,7 @@ function StaffManagementInner() {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 transition"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -620,7 +620,7 @@ function StaffManagementInner() {
                   </button>
                   <button
                     onClick={resetAddForm}
-                    className="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+                    className="flex-1 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 transition"
                   >
                     Done
                   </button>
@@ -822,7 +822,7 @@ function StaffManagementInner() {
                   <button
                     type="submit"
                     disabled={addLoading}
-                    className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                    className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
                   >
                     {addLoading ? "Creating Account…" : "Create Staff Account"}
                   </button>
@@ -892,7 +892,7 @@ function StaffManagementInner() {
                   </button>
                   <button
                     onClick={() => setResettingUser(null)}
-                    className="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+                    className="flex-1 rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
                   >
                     Done
                   </button>
@@ -1008,7 +1008,7 @@ function StaffManagementInner() {
                 <button
                   type="submit"
                   disabled={editProgramsLoading}
-                  className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
                 >
                   {editProgramsLoading ? "Saving…" : "Save Assignments"}
                 </button>

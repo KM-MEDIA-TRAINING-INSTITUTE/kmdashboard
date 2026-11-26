@@ -61,7 +61,7 @@ function CalendarInner() {
               key={f}
               onClick={() => setFilter(f)}
               className={`rounded-md px-3 py-1 text-xs font-medium ${
-                filter === f ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+                filter === f ? "bg-brand-600 text-white" : "text-slate-600 hover:bg-slate-50"
               }`}
             >
               {f === "ALL" ? "All" : EVENT_META[f].label}

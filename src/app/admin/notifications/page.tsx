@@ -215,7 +215,7 @@ function NotificationsAdminInner() {
           </button>
           <button
             onClick={() => setShowQuickSms((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-sky-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
           >
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m22 2-7 20-4-9-9-4Z" />
@@ -384,7 +384,7 @@ function NotificationsAdminInner() {
               <button
                 type="submit"
                 disabled={sendingTest}
-                className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
               >
                 {sendingTest ? (
                   <>

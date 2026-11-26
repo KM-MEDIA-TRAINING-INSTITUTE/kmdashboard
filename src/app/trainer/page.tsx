@@ -2,8 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { BookOpen, CheckCircle2, Clock, FileEdit, Plus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  StatCard,
+  StatusBadge,
+} from "@/components/dashboard/ui";
+import { Button, PageHeader } from "@/components/ui/primitives";
+import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api/client";
 import {
   coursesApi,
@@ -13,16 +23,8 @@ import {
   type CourseStatusValue,
 } from "@/lib/api/courses";
 
-function StatCard({ label, value, tone }: { label: string; value: number; tone: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${tone}`}>{value}</p>
-    </div>
-  );
-}
-
 function TrainerCoursesInner() {
+  const toast = useToast();
   const [courses, setCourses] = useState<CourseOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ function TrainerCoursesInner() {
     setError(null);
     try {
       await coursesApi.transition(courseId, "submit");
+      toast.success("Submitted for review");
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Submit failed");
@@ -68,89 +71,84 @@ function TrainerCoursesInner() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">My courses</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Build content, submit for review, and track the approval workflow.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreate((v) => !v)}
-          className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
-        >
-          {showCreate ? "Close form" : "New course draft"}
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Teaching"
+        title="My courses"
+        description="Build course modules, upload learning materials, submit for review, and track approval."
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard/trainer" }, { label: "My courses" }]}
+        actions={
+          <Button
+            variant={showCreate ? "outline" : "primary"}
+            icon={showCreate ? undefined : <Plus className="h-4 w-4" />}
+            onClick={() => setShowCreate((v) => !v)}
+          >
+            {showCreate ? "Close form" : "New course draft"}
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <ErrorState title="Could not load courses" detail={error} onRetry={load} />}
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <StatCard label="Total courses" value={courses.length} tone="text-slate-900" />
-        <StatCard label="Drafts" value={counts.DRAFT ?? 0} tone="text-slate-700" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Total courses" value={courses.length} icon={<BookOpen className="h-4 w-4" />} tone="brand" />
+        <StatCard label="Drafts" value={counts.DRAFT ?? 0} icon={<FileEdit className="h-4 w-4" />} />
         <StatCard
           label="Under review"
           value={(counts.SUBMITTED ?? 0) + (counts.UNDER_REVIEW ?? 0)}
-          tone="text-amber-700"
+          icon={<Clock className="h-4 w-4" />}
+          tone="warn"
         />
-        <StatCard label="Published" value={counts.PUBLISHED ?? 0} tone="text-teal-700" />
+        <StatCard label="Published" value={counts.PUBLISHED ?? 0} icon={<CheckCircle2 className="h-4 w-4" />} tone="good" />
       </div>
 
       {showCreate && (
         <CreateCourseForm
           onCreated={async () => {
             setShowCreate(false);
+            toast.success("Course draft created");
             await load();
           }}
         />
       )}
 
       {loading ? (
-        <p className="text-sm text-slate-400">Loading your courses…</p>
+        <LoadingSkeleton rows={4} />
       ) : courses.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-          You have no courses yet. Create a draft to start building modules and
-          lessons — an administrator will review it before publication.
-        </div>
+        <EmptyState
+          icon={<BookOpen className="h-5 w-5" />}
+          title="You have no courses yet"
+          detail="Create a draft to start building modules and lessons — an administrator will review it before publication."
+        />
       ) : (
         <ul className="space-y-3">
           {courses.map((c) => (
             <li
               key={c.id}
-              className="rounded-xl border border-slate-200 bg-white p-5"
+              className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)] transition-all hover:border-brand-200"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/trainer/courses/${c.id}`}
-                      className="text-sm font-semibold text-slate-900 hover:underline"
+                      className="text-base font-bold text-ink-900 transition-colors hover:text-brand-700 hover:underline"
                     >
                       {c.title}
                     </Link>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                        COURSE_STATUS_META[c.status as CourseStatusValue]?.classes ??
-                        "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {COURSE_STATUS_META[c.status as CourseStatusValue]?.label ?? c.status}
-                    </span>
+                    <StatusBadge
+                      status={c.status}
+                      label={COURSE_STATUS_META[c.status as CourseStatusValue]?.label ?? c.status}
+                    />
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    <span className="font-mono">{c.course_code}</span> · {c.course_type}
-                    {c.difficulty_level ? ` · ${c.difficulty_level}` : ""} ·{" "}
-                    {c.module_count} module{c.module_count === 1 ? "" : "s"} ·{" "}
-                    {c.lesson_count} lesson{c.lesson_count === 1 ? "" : "s"}
+                    <span className="font-mono font-semibold text-brand-700">{c.course_code}</span> ·{" "}
+                    {c.course_type}
+                    {c.difficulty_level ? ` · ${c.difficulty_level}` : ""} · {c.module_count} module
+                    {c.module_count === 1 ? "" : "s"} · {c.lesson_count} lesson
+                    {c.lesson_count === 1 ? "" : "s"}
                   </p>
                   {c.short_description && (
-                    <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                      {c.short_description}
-                    </p>
+                    <p className="mt-2 max-w-2xl text-sm text-slate-600">{c.short_description}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -158,20 +156,21 @@ function TrainerCoursesInner() {
                     const act = TRAINER_STATUS_ACTIONS[c.status as CourseStatusValue];
                     if (!act) return null;
                     return (
-                      <button
-                        disabled={busyId === c.id}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={busyId === c.id}
                         onClick={() => submitForReview(c.id)}
-                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                       >
-                        {busyId === c.id ? "Submitting…" : act.label}
-                      </button>
+                        {act.label}
+                      </Button>
                     );
                   })()}
                   <Link
                     href={`/trainer/courses/${c.id}`}
-                    className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
+                    className="inline-flex h-8 items-center rounded-lg bg-brand-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
                   >
-                    Open builder
+                    Open builder →
                   </Link>
                 </div>
               </div>
@@ -218,43 +217,43 @@ function CreateCourseForm({ onCreated }: { onCreated: () => void | Promise<void>
   };
 
   const input =
-    "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none";
+    "w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-ink-900 focus:border-brand-500 focus:outline-none";
 
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-xl border border-slate-200 bg-white p-6"
+      className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-[var(--shadow-card)]"
     >
-      <h2 className="text-sm font-semibold text-slate-900">New course draft</h2>
+      <h2 className="text-base font-bold text-ink-900">New course draft</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm">
-          <span className="text-slate-700">Title</span>
+        <label className="block text-xs font-semibold text-ink-800">
+          Title
           <input
             required
             minLength={3}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={`mt-1 ${input}`}
+            className={`mt-1.5 ${input}`}
             placeholder="Introduction to Broadcast Journalism"
           />
         </label>
-        <label className="block text-sm">
-          <span className="text-slate-700">Course code</span>
+        <label className="block text-xs font-semibold text-ink-800">
+          Course code
           <input
             required
             minLength={2}
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            className={`mt-1 font-mono ${input}`}
+            className={`mt-1.5 font-mono ${input}`}
             placeholder="BJN101"
           />
         </label>
-        <label className="block text-sm">
-          <span className="text-slate-700">Course type</span>
+        <label className="block text-xs font-semibold text-ink-800">
+          Course type
           <select
             value={courseType}
             onChange={(e) => setCourseType(e.target.value)}
-            className={`mt-1 ${input}`}
+            className={`mt-1.5 ${input}`}
           >
             {["CORE", "ELECTIVE", "PRACTICAL", "WORKSHOP", "PROJECT", "GENERAL"].map((t) => (
               <option key={t} value={t}>
@@ -263,12 +262,12 @@ function CreateCourseForm({ onCreated }: { onCreated: () => void | Promise<void>
             ))}
           </select>
         </label>
-        <label className="block text-sm">
-          <span className="text-slate-700">Difficulty</span>
+        <label className="block text-xs font-semibold text-ink-800">
+          Difficulty
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            className={`mt-1 ${input}`}
+            className={`mt-1.5 ${input}`}
           >
             <option value="">—</option>
             {["BEGINNER", "INTERMEDIATE", "ADVANCED"].map((d) => (
@@ -278,37 +277,33 @@ function CreateCourseForm({ onCreated }: { onCreated: () => void | Promise<void>
             ))}
           </select>
         </label>
-        <label className="block text-sm sm:col-span-2">
-          <span className="text-slate-700">Short description</span>
+        <label className="block text-xs font-semibold text-ink-800 sm:col-span-2">
+          Short description
           <input
             value={shortDescription}
             onChange={(e) => setShortDescription(e.target.value)}
             maxLength={500}
-            className={`mt-1 ${input}`}
+            className={`mt-1.5 ${input}`}
             placeholder="One-line summary shown to students"
           />
         </label>
-        <label className="block text-sm sm:col-span-2">
-          <span className="text-slate-700">
-            Learning objectives (one per line)
-          </span>
+        <label className="block text-xs font-semibold text-ink-800 sm:col-span-2">
+          Learning objectives (one per line)
           <textarea
             value={objectives}
             onChange={(e) => setObjectives(e.target.value)}
             rows={3}
-            className={`mt-1 ${input}`}
+            className={`mt-1.5 ${input}`}
             placeholder={"Explain broadcast journalism principles\nWrite a broadcast news script"}
           />
         </label>
       </div>
-      {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-      >
-        {submitting ? "Creating…" : "Create draft"}
-      </button>
+      {error && <p className="mt-3 text-xs font-medium text-red-700">{error}</p>}
+      <div className="mt-4">
+        <Button type="submit" variant="primary" loading={submitting}>
+          Create draft
+        </Button>
+      </div>
     </form>
   );
 }

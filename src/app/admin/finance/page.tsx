@@ -1,8 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Banknote, Clock, Plus, Receipt, Wallet } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  SectionCard,
+  StatCard,
+  StatusBadge,
+} from "@/components/dashboard/ui";
+import { Button, PageHeader } from "@/components/ui/primitives";
+import { useToast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api/client";
 import {
   financeApi,
@@ -28,11 +39,11 @@ const STATUS_FILTERS: Array<InvoiceStatusValue | "ALL"> = [
 
 const PAYMENT_STATUS_FILTERS = ["ALL", "SUCCESS", "PENDING", "FAILED", "REVERSED"] as const;
 
-const PAYMENT_STATUS_META: Record<string, { label: string; classes: string }> = {
-  SUCCESS: { label: "Successful", classes: "bg-emerald-100 text-emerald-700" },
-  PENDING: { label: "Pending", classes: "bg-amber-100 text-amber-800" },
-  FAILED: { label: "Failed", classes: "bg-red-100 text-red-700" },
-  REVERSED: { label: "Reversed", classes: "bg-slate-200 text-slate-500" },
+const PAYMENT_STATUS_META: Record<string, { label: string }> = {
+  SUCCESS: { label: "Successful" },
+  PENDING: { label: "Pending" },
+  FAILED: { label: "Failed" },
+  REVERSED: { label: "Reversed" },
 };
 
 const PAYMENT_PURPOSE_LABELS: Record<string, string> = {
@@ -56,16 +67,8 @@ function formatDateTime(value: string | null): string {
   });
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-1 text-xl font-semibold ${tone}`}>{value}</p>
-    </div>
-  );
-}
-
 function FinanceInner() {
+  const toast = useToast();
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof financeApi.summary>> | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filter, setFilter] = useState<InvoiceStatusValue | "ALL">("ALL");
@@ -73,14 +76,11 @@ function FinanceInner() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [planFor, setPlanFor] = useState<string | null>(null);
-  const [planWeights, setPlanWeights] = useState("40,30,30");
-  const [planName, setPlanName] = useState("Semester plan");
+  const [planWeights] = useState("40,30,30");
+  const [planName] = useState("Semester plan");
   const [cancelFor, setCancelFor] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
-  // Program fee configuration — the bursary must publish an ACTIVE TUITION
-  // fee per programme before tuition can be raised against an enrollment.
   const [fees, setFees] = useState<ProgramFee[]>([]);
   const [programs, setPrograms] = useState<Array<{ id: string; title: string; tuition_minor?: number | null }>>([]);
   const [showFeeForm, setShowFeeForm] = useState(false);
@@ -89,7 +89,6 @@ function FinanceInner() {
   const [feeAmount, setFeeAmount] = useState("");
   const [feeBusy, setFeeBusy] = useState(false);
 
-  // Finance history — every payment transaction (application fees + tuition).
   const [payments, setPayments] = useState<FinancePayment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState<string | null>(null);
@@ -157,13 +156,20 @@ function FinanceInner() {
         setError("Enter a positive amount in cedis.");
         return;
       }
-      const fee = await financeApi.createFee({ program_id: feeProgramId, fee_type: feeType, amount_minor: amountMinor });
-      // Fees are created as DRAFT; publish immediately so issuers can use them.
+      const fee = await financeApi.createFee({
+        program_id: feeProgramId,
+        fee_type: feeType,
+        amount_minor: amountMinor,
+      });
       try {
         await financeApi.setFeeStatus(fee.id, "ACTIVE");
-        setNotice(`Fee published: ${feeType} ${formatMoney(fee.amount_minor, fee.currency)} — ${programTitle(fee.program_id)}.`);
+        const msg = `Fee published: ${feeType} ${formatMoney(fee.amount_minor, fee.currency)} — ${programTitle(fee.program_id)}.`;
+        setNotice(msg);
+        toast.success("Fee published", msg);
       } catch {
-        setNotice(`Fee created as draft: ${feeType} ${formatMoney(fee.amount_minor, fee.currency)} — activate it below.`);
+        setNotice(
+          `Fee created as draft: ${feeType} ${formatMoney(fee.amount_minor, fee.currency)} — activate it below.`
+        );
       }
       setShowFeeForm(false);
       setFeeAmount("");
@@ -186,6 +192,7 @@ function FinanceInner() {
     try {
       await fn();
       setNotice(ok);
+      toast.success(ok);
       await load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Action failed");
@@ -198,50 +205,46 @@ function FinanceInner() {
     <RouteGuard allowedRoles={["ADMIN", "SUPERADMIN"]}>
       <AppShell>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-lg font-semibold text-slate-900">Finance</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Invoices, installment plans, verified payments, and balances. Money
-              only moves when a Paystack webhook or server-side verification
-              confirms it — never from the browser.
-            </p>
-          </div>
+          <PageHeader
+            eyebrow="Administration"
+            title="Finance"
+            description="Invoices, installment plans, verified payments, and balances. Money only moves when a Paystack webhook or server-side verification confirms it."
+            breadcrumbs={[{ label: "Dashboard", href: "/dashboard/admin" }, { label: "Finance" }]}
+          />
 
-          {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-          )}
+          {error && <ErrorState title="Finance error" detail={error} onRetry={load} />}
           {notice && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{notice}</div>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-medium text-emerald-800">
+              {notice}
+            </div>
           )}
 
           {summary && (
-            <div className="grid gap-4 sm:grid-cols-4">
-              <Stat label="Billed" value={formatMoney(summary.billed_minor)} tone="text-slate-900" />
-              <Stat label="Collected" value={formatMoney(summary.collected_minor)} tone="text-emerald-700" />
-              <Stat label="Outstanding" value={formatMoney(summary.outstanding_minor)} tone="text-amber-700" />
-              <Stat label="Overdue" value={formatMoney(summary.overdue_minor)} tone="text-red-700" />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard label="Billed" value={formatMoney(summary.billed_minor)} icon={<Wallet className="h-4 w-4" />} />
+              <StatCard label="Collected" value={formatMoney(summary.collected_minor)} icon={<Banknote className="h-4 w-4" />} tone="good" />
+              <StatCard label="Outstanding" value={formatMoney(summary.outstanding_minor)} icon={<Clock className="h-4 w-4" />} tone="warn" />
+              <StatCard label="Overdue" value={formatMoney(summary.overdue_minor)} icon={<AlertTriangle className="h-4 w-4" />} tone="bad" />
             </div>
           )}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">Programme fees</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Publish each programme&apos;s tuition (and other) fees here. A student&apos;s tuition invoice can only be
-                  raised once an ACTIVE fee exists for their programme.
-                </p>
-              </div>
-              <button
+          <SectionCard
+            title="Programme fees"
+            description="Publish each programme's tuition (and other) fees here. A student's tuition invoice can only be raised once an ACTIVE fee exists for their programme."
+            icon={<Receipt className="h-4 w-4" />}
+            action={
+              <Button
+                variant={showFeeForm ? "outline" : "primary"}
+                size="sm"
+                icon={showFeeForm ? undefined : <Plus className="h-3.5 w-3.5" />}
                 onClick={() => setShowFeeForm((v) => !v)}
-                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700"
               >
                 {showFeeForm ? "Close" : "New fee"}
-              </button>
-            </div>
-
+              </Button>
+            }
+          >
             {showFeeForm && (
-              <div className="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_auto_auto_auto]">
+              <div className="mb-4 grid gap-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 sm:grid-cols-[1fr_auto_auto_auto]">
                 <select
                   value={feeProgramId}
                   onChange={(e) => {
@@ -251,315 +254,335 @@ function FinanceInner() {
                       setFeeAmount((p.tuition_minor / 100).toFixed(2));
                     }
                   }}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm"
                 >
                   <option value="">Programme…</option>
                   {programs.map((p) => (
-                    <option key={p.id} value={p.id}>{p.title}</option>
+                    <option key={p.id} value={p.id}>
+                      {p.title}
+                    </option>
                   ))}
                 </select>
                 <select
                   value={feeType}
                   onChange={(e) => setFeeType(e.target.value as FeeType)}
-                  className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-sm"
                 >
-                  {(["APPLICATION", "TUITION", "REGISTRATION", "EXAMINATION", "OTHER"] as FeeType[]).map((t) => (
-                    <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
-                  ))}
+                  {(["APPLICATION", "TUITION", "REGISTRATION", "EXAMINATION", "OTHER"] as FeeType[]).map(
+                    (t) => (
+                      <option key={t} value={t}>
+                        {t.charAt(0) + t.slice(1).toLowerCase()}
+                      </option>
+                    )
+                  )}
                 </select>
                 <input
                   value={feeAmount}
                   onChange={(e) => setFeeAmount(e.target.value)}
-                  className="w-32 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  className="h-9 w-36 rounded-lg border border-slate-200 bg-white px-3 text-sm"
                   placeholder="Amount (GHS)"
                   inputMode="decimal"
                 />
-                <button
-                  disabled={feeBusy}
-                  onClick={submitFee}
-                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                >
+                <Button variant="primary" size="md" loading={feeBusy} onClick={submitFee}>
                   {feeBusy ? "Saving…" : "Create & publish"}
-                </button>
+                </Button>
               </div>
             )}
 
             {fees.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
-                No fees configured yet — until you publish a tuition fee here, enrolled students show a zero balance.
-              </p>
+              <EmptyState
+                title="No fees configured yet"
+                detail="Until you publish a tuition fee here, enrolled students show a zero balance."
+              />
             ) : (
-              <ul className="mt-3 space-y-2">
+              <ul className="space-y-2">
                 {fees.map((f) => (
-                  <li key={f.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                  <li
+                    key={f.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3"
+                  >
                     <div>
-                      <p className="text-sm font-medium text-slate-800">
-                        {f.fee_type === "TUITION" ? "Tuition" : f.fee_type.charAt(0) + f.fee_type.slice(1).toLowerCase()} · {programTitle(f.program_id)}
+                      <p className="text-sm font-semibold text-ink-900">
+                        {f.fee_type === "TUITION"
+                          ? "Tuition"
+                          : f.fee_type.charAt(0) + f.fee_type.slice(1).toLowerCase()}{" "}
+                        · {programTitle(f.program_id)}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {formatMoney(f.amount_minor, f.currency)}
+                        <span className="font-semibold text-ink-800">
+                          {formatMoney(f.amount_minor, f.currency)}
+                        </span>
                         {f.academic_session_id ? " · session-specific" : " · all sessions"}
                         {f.campus_id ? " · campus-specific" : ""}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          f.status === "ACTIVE"
-                            ? "bg-emerald-100 text-emerald-700"
-                            : f.status === "DRAFT"
-                              ? "bg-slate-200 text-slate-600"
-                              : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {f.status}
-                      </span>
+                      <StatusBadge status={f.status} />
                       {f.status !== "ACTIVE" && f.status !== "ARCHIVED" && (
-                        <button
+                        <Button
+                          size="sm"
+                          variant="secondary"
                           disabled={busyId === f.id}
                           onClick={() => transitionFee(f, "ACTIVE")}
-                          className="rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
                         >
                           Activate
-                        </button>
+                        </Button>
                       )}
                       {f.status === "ACTIVE" && (
-                        <button
+                        <Button
+                          size="sm"
+                          variant="outline"
                           disabled={busyId === f.id}
                           onClick={() => transitionFee(f, "INACTIVE")}
-                          className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
                         >
                           Deactivate
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </SectionCard>
 
-          <div className="flex flex-wrap gap-2">
-            {STATUS_FILTERS.map((s) => (
-              <button
-                key={s}
-                onClick={() => setFilter(s)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                  filter === s
-                    ? "bg-slate-900 text-white"
-                    : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                {s === "ALL" ? "All" : INVOICE_STATUS_META[s as InvoiceStatusValue].label}
-              </button>
-            ))}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-base font-bold tracking-tight text-ink-900">Invoices</h2>
+              <div className="flex flex-wrap gap-1.5">
+                {STATUS_FILTERS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setFilter(s)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                      filter === s
+                        ? "bg-brand-600 text-white shadow-2xs"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {s === "ALL" ? "All" : INVOICE_STATUS_META[s as InvoiceStatusValue].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loading ? (
+              <LoadingSkeleton rows={4} />
+            ) : invoices.length === 0 ? (
+              <EmptyState
+                icon
+                title="No invoices in this view"
+                detail="Raise a tuition charge from a student's enrolment, or an ad-hoc charge."
+              />
+            ) : (
+              <ul className="space-y-3">
+                {invoices.map((inv) => (
+                  <li
+                    key={inv.id}
+                    className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-[var(--shadow-card)]"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-mono text-sm font-bold text-ink-900">
+                            {inv.invoice_number}
+                          </p>
+                          <StatusBadge
+                            status={inv.status}
+                            label={INVOICE_STATUS_META[inv.status]?.label}
+                          />
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">
+                          <span className="font-semibold tabular-nums text-emerald-700">
+                            {formatMoney(inv.amount_paid_minor)}
+                          </span>{" "}
+                          paid of{" "}
+                          <span className="font-semibold tabular-nums text-ink-900">
+                            {formatMoney(inv.total_minor)}
+                          </span>
+                          <span className="text-slate-400">
+                            {" "}
+                            · balance {formatMoney(inv.balance_minor)}
+                          </span>
+                        </p>
+                        {inv.due_date && (
+                          <p className="mt-0.5 text-xs text-slate-400">Due {inv.due_date}</p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busyId === inv.id}
+                            onClick={() =>
+                              act(
+                                inv.id,
+                                () =>
+                                  financeApi.createPlan(inv.id, {
+                                    plan_name: planName,
+                                    weights: planWeights
+                                      .split(",")
+                                      .map((w) => Number(w.trim()))
+                                      .filter((n) => n > 0),
+                                  }),
+                                "Installment plan created."
+                              )
+                            }
+                          >
+                            {busyId === inv.id ? "Working…" : "Create 40/30/30 plan"}
+                          </Button>
+                        )}
+                        {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            onClick={() => setCancelFor(cancelFor === inv.id ? null : inv.id)}
+                          >
+                            Cancel invoice
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    {cancelFor === inv.id && (
+                      <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                        <label
+                          className="block text-xs font-semibold text-ink-800"
+                          htmlFor={`cr-${inv.id}`}
+                        >
+                          Cancellation reason (required, audited)
+                        </label>
+                        <input
+                          id={`cr-${inv.id}`}
+                          value={cancelReason}
+                          onChange={(e) => setCancelReason(e.target.value)}
+                          className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm"
+                          placeholder="e.g. issued in error"
+                        />
+                        <div className="mt-2.5 flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setCancelFor(null);
+                              setCancelReason("");
+                            }}
+                          >
+                            Close
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            disabled={busyId === inv.id || cancelReason.trim().length < 3}
+                            onClick={async () => {
+                              await act(
+                                inv.id,
+                                () => financeApi.cancelInvoice(inv.id, cancelReason.trim()),
+                                "Invoice cancelled."
+                              );
+                              setCancelFor(null);
+                              setCancelReason("");
+                            }}
+                          >
+                            Confirm cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
-          {loading ? (
-            <p className="text-sm text-slate-400">Loading invoices…</p>
-          ) : invoices.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
-              No invoices in this view. Raise a tuition charge from a student&apos;s
-              enrollment, or an ad-hoc charge.
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {invoices.map((inv) => (
-                <li key={inv.id} className="rounded-xl border border-slate-200 bg-white p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-mono text-sm font-semibold text-slate-900">{inv.invoice_number}</p>
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${INVOICE_STATUS_META[inv.status].classes}`}>
-                          {INVOICE_STATUS_META[inv.status].label}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {formatMoney(inv.amount_paid_minor)} paid of {formatMoney(inv.total_minor)}
-                        <span className="text-slate-400"> · balance {formatMoney(inv.balance_minor)}</span>
-                      </p>
-                      {inv.due_date && (
-                        <p className="mt-0.5 text-xs text-slate-400">Due {inv.due_date}</p>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
-                        <button
-                          disabled={busyId === inv.id}
-                          onClick={() =>
-                            act(
-                              inv.id,
-                              () =>
-                                financeApi.createPlan(inv.id, {
-                                  plan_name: planName,
-                                  weights: planWeights
-                                    .split(",")
-                                    .map((w) => Number(w.trim()))
-                                    .filter((n) => n > 0),
-                                }),
-                              "Installment plan created."
-                            )
-                          }
-                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                        >
-                          {busyId === inv.id ? "Working…" : "Create 40/30/30 plan"}
-                        </button>
-                      )}
-                      {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
-                        <button
-                          onClick={() => setCancelFor(cancelFor === inv.id ? null : inv.id)}
-                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                        >
-                          Cancel invoice
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {cancelFor === inv.id && (
-                    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <label className="block text-xs font-medium text-slate-700" htmlFor={`cr-${inv.id}`}>
-                        Cancellation reason (required, audited)
-                      </label>
-                      <input
-                        id={`cr-${inv.id}`}
-                        value={cancelReason}
-                        onChange={(e) => setCancelReason(e.target.value)}
-                        className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                        placeholder="e.g. issued in error"
-                      />
-                      <div className="mt-2 flex justify-end gap-2">
-                        <button
-                          className="text-xs text-slate-500 hover:text-slate-700"
-                          onClick={() => {
-                            setCancelFor(null);
-                            setCancelReason("");
-                          }}
-                        >
-                          Close
-                        </button>
-                        <button
-                          disabled={busyId === inv.id || cancelReason.trim().length < 3}
-                          onClick={async () => {
-                            await act(inv.id, () => financeApi.cancelInvoice(inv.id, cancelReason.trim()), "Invoice cancelled.");
-                            setCancelFor(null);
-                            setCancelReason("");
-                          }}
-                          className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
-                        >
-                          Cancel invoice
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <section className="rounded-xl border border-slate-200 bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">Finance history</h2>
-                <p className="mt-1 text-xs text-slate-500">
-                  Every payment transaction — application fees and tuition — newest first.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+          <SectionCard
+            title="Finance history"
+            description="Every payment transaction — application fees and tuition — newest first."
+            action={
+              <div className="flex flex-wrap gap-1.5">
                 {PAYMENT_STATUS_FILTERS.map((s) => (
                   <button
                     key={s}
                     onClick={() => setPaymentFilter(s)}
-                    className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-all ${
                       paymentFilter === s
-                        ? "bg-slate-900 text-white"
-                        : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                        ? "bg-brand-600 text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     {s === "ALL" ? "All" : PAYMENT_STATUS_META[s]?.label ?? s}
                   </button>
                 ))}
               </div>
-            </div>
-
-            {paymentsError && (
-              <div className="mx-6 mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {paymentsError}
-              </div>
-            )}
+            }
+          >
+            {paymentsError && <ErrorState title="Could not load payment history" detail={paymentsError} onRetry={loadPayments} />}
 
             {paymentsLoading ? (
-              <p className="px-6 py-6 text-sm text-slate-400">Loading payment history…</p>
+              <LoadingSkeleton rows={4} />
             ) : payments.length === 0 ? (
-              <div className="px-6 py-6 text-sm text-slate-500">
-                No payment transactions in this view.
-              </div>
+              <EmptyState icon title="No payment transactions in this view" />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-xl border border-slate-200/70">
                 <table className="w-full text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
-                      <th className="hidden px-6 py-3 font-medium sm:table-cell">Date</th>
-                      <th className="px-6 py-3 font-medium">Payer</th>
-                      <th className="hidden px-6 py-3 font-medium md:table-cell">Purpose</th>
-                      <th className="hidden px-6 py-3 font-medium lg:table-cell">Channel</th>
-                      <th className="hidden px-6 py-3 font-medium lg:table-cell">Reference</th>
-                      <th className="px-6 py-3 text-right font-medium">Amount</th>
-                      <th className="px-6 py-3 font-medium">Status</th>
+                    <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                      <th className="hidden px-4 py-3 sm:table-cell">Date</th>
+                      <th className="px-4 py-3">Payer</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Purpose</th>
+                      <th className="hidden px-4 py-3 lg:table-cell">Channel</th>
+                      <th className="hidden px-4 py-3 lg:table-cell">Reference</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                      <th className="px-4 py-3">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {payments.map((pay) => {
-                      const meta = PAYMENT_STATUS_META[pay.status] ?? {
-                        label: pay.status,
-                        classes: "bg-slate-100 text-slate-600",
-                      };
-                      return (
-                        <tr key={pay.id} className="hover:bg-slate-50">
-                          <td className="hidden whitespace-nowrap px-6 py-3 text-slate-500 sm:table-cell">
-                            {formatDateTime(pay.created_at)}
-                          </td>
-                          <td className="px-6 py-3">
-                            <p className="font-medium text-slate-800">
-                              {pay.payer_name || pay.payer_email || "—"}
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {payments.map((pay) => (
+                      <tr key={pay.id} className="transition-colors hover:bg-slate-50/80">
+                        <td className="hidden whitespace-nowrap px-4 py-3 text-xs text-slate-500 sm:table-cell">
+                          {formatDateTime(pay.created_at)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-ink-900">
+                            {pay.payer_name || pay.payer_email || "—"}
+                          </p>
+                          {(pay.index_number || pay.payer_name) && (
+                            <p className="text-xs text-slate-400">
+                              {pay.index_number ? `${pay.index_number} · ` : ""}
+                              {pay.payer_name ? pay.payer_email : ""}
                             </p>
-                            {(pay.index_number || pay.payer_name) && (
-                              <p className="text-xs text-slate-400">
-                                {pay.index_number ? `${pay.index_number} · ` : ""}
-                                {pay.payer_name ? pay.payer_email : ""}
-                              </p>
-                            )}
-                          </td>
-                          <td className="hidden px-6 py-3 text-slate-600 md:table-cell">
-                            {PAYMENT_PURPOSE_LABELS[pay.purpose] ?? pay.purpose}
-                            {pay.invoice_number && (
-                              <span className="block font-mono text-xs text-slate-400">
-                                {pay.invoice_number}
-                              </span>
-                            )}
-                          </td>
-                          <td className="hidden px-6 py-3 text-slate-600 capitalize lg:table-cell">
-                            {pay.channel ? pay.channel.replace(/_/g, " ") : "—"}
-                          </td>
-                          <td className="hidden px-6 py-3 font-mono text-xs text-slate-500 lg:table-cell">
-                            {pay.reference}
-                          </td>
-                          <td className="whitespace-nowrap px-6 py-3 text-right font-medium text-slate-800">
-                            {formatMoney(pay.amount_minor, pay.currency)}
-                          </td>
-                          <td className="px-6 py-3">
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${meta.classes}`}>
-                              {meta.label}
+                          )}
+                        </td>
+                        <td className="hidden px-4 py-3 text-slate-600 md:table-cell">
+                          {PAYMENT_PURPOSE_LABELS[pay.purpose] ?? pay.purpose}
+                          {pay.invoice_number && (
+                            <span className="block font-mono text-xs text-slate-400">
+                              {pay.invoice_number}
                             </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          )}
+                        </td>
+                        <td className="hidden px-4 py-3 capitalize text-slate-600 lg:table-cell">
+                          {pay.channel ? pay.channel.replace(/_/g, " ") : "—"}
+                        </td>
+                        <td className="hidden px-4 py-3 font-mono text-xs text-slate-500 lg:table-cell">
+                          {pay.reference}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-ink-900">
+                          {formatMoney(pay.amount_minor, pay.currency)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge
+                            status={pay.status}
+                            label={PAYMENT_STATUS_META[pay.status]?.label ?? pay.status}
+                          />
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </section>
+          </SectionCard>
         </div>
       </AppShell>
     </RouteGuard>

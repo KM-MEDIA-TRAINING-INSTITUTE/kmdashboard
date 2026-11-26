@@ -101,7 +101,7 @@ function InvoiceDocInner() {
             <button
               onClick={() => window.print()}
               disabled={!doc}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
             >
               Print / Save as PDF
             </button>
@@ -273,7 +273,7 @@ function InvoiceDocInner() {
                                 <button
                                   disabled={busyId === i.id}
                                   onClick={() => payInstallment(i.id)}
-                                  className="rounded-lg bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                                  className="rounded-lg bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                                 >
                                   {busyId === i.id ? "Starting…" : `Pay ${formatMoney(remaining, doc.currency)}`}
                                 </button>

@@ -190,7 +190,7 @@ export default function AdminCurriculaPage() {
                     busy || name.trim().length < 3 || code.trim().length < 2 || !programId || !sessionId
                   }
                   onClick={createCurriculum}
-                  className="justify-self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 sm:col-span-5"
+                  className="justify-self-start rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50 sm:col-span-5"
                 >
                   Create curriculum
                 </button>
@@ -251,7 +251,7 @@ export default function AdminCurriculaPage() {
                               "Curriculum activated — enrolled students now see its published courses."
                             )
                           }
-                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                          className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                         >
                           Activate
                         </button>
@@ -318,7 +318,7 @@ export default function AdminCurriculaPage() {
                                   setOpenId(null);
                                 })
                               }
-                              className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+                              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50"
                             >
                               Add
                             </button>

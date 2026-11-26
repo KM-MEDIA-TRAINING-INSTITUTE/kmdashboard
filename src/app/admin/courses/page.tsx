@@ -98,7 +98,7 @@ function AdminCoursesInner() {
               onClick={() => setFilter(s)}
               className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                 active
-                  ? "bg-slate-900 text-white"
+                  ? "bg-brand-600 text-white"
                   : "border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
@@ -174,7 +174,7 @@ function CourseAdminActions({
   const btn =
     "rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 whitespace-nowrap";
   const outline = `${btn} border border-slate-300 text-slate-700 hover:bg-slate-50`;
-  const primary = `${btn} bg-slate-900 text-white hover:bg-slate-700`;
+  const primary = `${btn} bg-brand-600 text-white hover:bg-brand-700`;
 
   const disabledDuring =
     course.status === "DRAFT" || course.status === "PUBLISHED" || course.status === "ARCHIVED";
