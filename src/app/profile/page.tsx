@@ -530,6 +530,45 @@ function UserProfileInner() {
             </div>
           </section>
 
+          {/* Assigned Programmes (for trainers) */}
+          {rolesList.includes("TRAINER") && (
+            <section className="rounded-xl border border-slate-200 bg-white p-6">
+              <h2 className="text-sm font-semibold text-slate-900">Assigned Programmes</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Academic programmes you are appointed to teach and facilitate at KM Media Training Institute.
+              </p>
+              {user?.assigned_programs && user.assigned_programs.length > 0 ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {user.assigned_programs.map((p) => (
+                    <div
+                      key={p.id}
+                      className="rounded-lg border border-slate-200 bg-slate-50/60 p-3.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded">
+                          {p.code}
+                        </span>
+                        {p.certificate && (
+                          <span className="text-[11px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                            {p.certificate}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm font-medium text-slate-900">{p.title}</p>
+                      {p.duration_weeks && (
+                        <p className="mt-1 text-xs text-slate-400">Duration: {p.duration_weeks} weeks</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">
+                  No programmes currently assigned. Contact the academic office if your appointment is pending.
+                </p>
+              )}
+            </section>
+          )}
+
           {/* Form */}
           <form
             onSubmit={(e) => {

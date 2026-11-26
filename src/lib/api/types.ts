@@ -25,6 +25,9 @@ export interface ProgramBrief {
   slug: string;
   code: string;
   title: string;
+  category?: string | null;
+  certificate?: string | null;
+  duration_weeks?: number | null;
 }
 
 /** Payload of GET /auth/me and GET /users. */

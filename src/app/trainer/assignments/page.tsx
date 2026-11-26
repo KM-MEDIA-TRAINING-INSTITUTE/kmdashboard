@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { ApiError } from "@/lib/api/client";
@@ -14,6 +15,7 @@ import {
 } from "@/lib/api/academic";
 
 function TrainerAssignmentsInner() {
+  const searchParams = useSearchParams();
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [offeringId, setOfferingId] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -36,7 +38,14 @@ function TrainerAssignmentsInner() {
         const rows = await offeringsApi.mine();
         if (!cancelled) {
           setOfferings(rows);
-          if (rows.length > 0) setOfferingId(rows[0].id);
+          if (rows.length > 0) {
+            const wantedOff = searchParams.get("offering");
+            if (wantedOff && rows.some((r) => r.id === wantedOff)) {
+              setOfferingId(wantedOff);
+            } else {
+              setOfferingId(rows[0].id);
+            }
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -45,7 +54,7 @@ function TrainerAssignmentsInner() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [searchParams]);
 
   const loadAssignments = useCallback(async (oid: string) => {
     const rows = await offeringsApi.assignments(oid);
@@ -133,6 +142,10 @@ function TrainerAssignmentsInner() {
 
       {loading ? (
         <p className="text-sm text-slate-400">Loading…</p>
+      ) : offerings.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+          No course offerings available yet. When you are assigned to offerings or programmes with scheduled classes, they will appear here.
+        </div>
       ) : (
         <>
           <div>

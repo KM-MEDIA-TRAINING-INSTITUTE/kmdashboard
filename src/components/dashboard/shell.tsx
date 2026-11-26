@@ -80,6 +80,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Curricula", href: "/admin/curricula", roles: ["ADMIN"], icon: "book" },
       { label: "Academic operations", href: "/admin/academic", roles: ["ADMIN"], icon: "calendar" },
       { label: "Finance", href: "/admin/finance", roles: ["ADMIN"], icon: "wallet" },
+      { label: "Notifications & SMS", href: "/admin/notifications", roles: ["ADMIN", "SUPERADMIN"], icon: "bell" },
     ],
   },
   {

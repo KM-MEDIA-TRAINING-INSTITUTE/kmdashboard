@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { ApiError } from "@/lib/api/client";
@@ -29,6 +30,7 @@ const STATE_ACTIONS: { action: string; label: string }[] = [
 ];
 
 function GradebookInner() {
+  const searchParams = useSearchParams();
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [offeringId, setOfferingId] = useState("");
   const [book, setBook] = useState<GradebookData | null>(null);
@@ -46,7 +48,14 @@ function GradebookInner() {
         const offs = await offeringsApi.mine();
         if (!cancelled) {
           setOfferings(offs);
-          if (offs.length > 0) setOfferingId(offs[0].id);
+          if (offs.length > 0) {
+            const wantedOff = searchParams.get("offering");
+            if (wantedOff && offs.some((o) => o.id === wantedOff)) {
+              setOfferingId(wantedOff);
+            } else {
+              setOfferingId(offs[0].id);
+            }
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -55,7 +64,7 @@ function GradebookInner() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [searchParams]);
 
   const loadBook = useCallback(async (oid: string) => {
     const data = await offeringsApi.gradebook(oid);

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { RouteGuard } from "@/components/route-guard";
 import { ApiError } from "@/lib/api/client";
+import { staffApi } from "@/lib/api/endpoints";
+import type { UserOut } from "@/lib/api/types";
 import {
   offeringsApi,
   reportsApi,
@@ -19,7 +21,8 @@ function AdminAcademicInner() {
   const [selected, setSelected] = useState<Offering | null>(null);
   const [analytics, setAnalytics] = useState<AttendanceAnalyticsRow[]>([]);
   const [report, setReport] = useState<Record<string, unknown>[]>([]);
-  const [trainerId, setTrainerId] = useState("");
+  const [trainers, setTrainers] = useState<UserOut[]>([]);
+  const [selectedTrainer, setSelectedTrainer] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +37,13 @@ function AdminAcademicInner() {
     let cancelled = false;
     (async () => {
       try {
-        await loadOfferings();
+        const [_, trainerList] = await Promise.all([
+          loadOfferings(),
+          staffApi.list({ role: "TRAINER", limit: 200 }).catch(() => [] as UserOut[]),
+        ]);
+        if (!cancelled) {
+          setTrainers(trainerList);
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : "Could not load offerings.");
       } finally {
@@ -70,12 +79,12 @@ function AdminAcademicInner() {
   }, [tab, loadReport]);
 
   const assignTrainer = async (o: Offering) => {
-    const tid = trainerId.trim();
+    const tid = selectedTrainer[o.id]?.trim();
     if (!tid) return;
     try {
       await offeringsApi.assignTrainer(o.id, tid, "PRIMARY");
-      setMsg("Trainer assigned (audited).");
-      setTrainerId("");
+      setMsg(`Trainer assigned to ${o.code} (audited).`);
+      setSelectedTrainer((prev) => ({ ...prev, [o.id]: "" }));
       await loadOfferings();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Assignment failed.");
@@ -144,14 +153,24 @@ function AdminAcademicInner() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <input
-                        placeholder="Trainer user id"
-                        value={trainerId}
-                        onChange={(e) => setTrainerId(e.target.value)}
-                        className="w-56 rounded-lg border border-slate-300 px-2 py-1"
-                        aria-label={`Trainer id for ${o.code}`}
-                      />
-                      <button onClick={() => assignTrainer(o)} className="rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-50">
+                      <select
+                        value={selectedTrainer[o.id] || ""}
+                        onChange={(e) => setSelectedTrainer((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs max-w-[200px]"
+                        aria-label={`Select trainer for ${o.code}`}
+                      >
+                        <option value="">Select trainer…</option>
+                        {trainers.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.full_name} ({t.email})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        disabled={!selectedTrainer[o.id]}
+                        onClick={() => assignTrainer(o)}
+                        className="rounded-lg bg-slate-900 px-2.5 py-1 text-white hover:bg-slate-700 disabled:opacity-40"
+                      >
                         Assign
                       </button>
                       <button onClick={() => openAttendance(o)} className="rounded-lg border border-slate-300 px-2 py-1 hover:bg-slate-50">
